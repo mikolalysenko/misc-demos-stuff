@@ -1,0 +1,64 @@
+
+float2 N[4] =
+{
+	float2(1, 0),
+	float2(0, 1),
+	float2(-1, 0),
+	float2(0, -1),
+};
+
+
+void main(
+	in float2 coords : TEXCOORD0,
+	uniform samplerRECT buffer0,
+	uniform samplerRECT chem_buffer,
+	uniform float slime_rate,
+	uniform float slime_weight,
+	uniform float chemo_weight,
+	out float4 result : COLOR0)
+{
+	const float pi = 3.14159265;
+
+	//Read in the cell state from the texture
+	float4 state = texRECT(buffer0, coords);
+	float2 pos = state.xy;
+	float angle = state.z;
+	float rand = state.w;
+
+	//Expand direction
+	float2 dir = float2(cos(angle), sin(angle)); 
+
+	//Compute probabilities
+	float prob[4];
+	float sum = 0;
+	for(int i=0; i<4; i++)
+	{
+		float4 neighbor = texRECT(chem_buffer, pos + N[i]);
+		
+		float chemo = neighbor.b;
+		float slime = neighbor.g;
+
+		prob[i] = chemo_weight * chemo +
+			(slime_weight * slime + slime_rate) * exp(2.5 * dot(dir, N[i]));
+		sum += prob[i];
+	}
+
+	//Normalize probabilities
+	for(int i=0; i<4; i++)
+	{
+		prob[i] /= sum;
+
+		if(rand < prob[i])
+		{
+			pos += N[i];
+			angle = i * pi / 2;
+			break;
+		}
+
+		rand -= prob[i];
+	}
+
+
+	//Store the result
+	result = float4(pos, angle, 0);
+}

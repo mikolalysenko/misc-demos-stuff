@@ -1,0 +1,39 @@
+GPU Myxobacteria Simulation
+By: Mikola Lysenko
+2/15/2007
+
+Description:
+
+This is a GPU based simulation of myxobacteria chemotaxis based on the work by Angela Stevens.  The simulation is carred out almost entirely without CPU intervention, even the cells themselves are stored entirely on the GPU.  Frame rate is largely unaffected by the number of bacteria.
+
+The same techniques used in this demo could be used to simulate a wide range of biological phenomena, and are also applicable in simulations of discrete autonomous agents.
+
+In the simulation, the white blobs represent bacteria.  The green tracks are the slime trails left by individual cells.  The blue clouds are chemical attractors which stimulate the cells to aggregate.  Bacteria can be interactively added to the simulation using the mouse.
+
+Controls:
+
+F1 - Toggle FPS
+F2 - Toggle Status Display
+F3 - Toggle Chemical Display
+
+1 - Select Eraser Tool
+2 - Select Slime Tool
+3 - Select Chemical Tool
+4 - Select Bacteria Tool
+
+Left Click - Use tool
+
+-/+ - Adjust bacteria population
+
+w/W - Adjust slime production rate
+s/S - Adjust slime preferenece
+x/X - Adjust slime decay
+e/E - Adjust chemical production rate
+d/D - Adjust chemical preference
+c/C - Adjust chemical decay
+f/F - Adjust chemical diffusion
+
+
+References:
+A. Stevens, "A stochastic cellular automaton modeling gliding and aggregation of myxobacteria."  2000, Novemeber. SIAM pp. 172-182
+

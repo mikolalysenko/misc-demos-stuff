@@ -1,0 +1,53 @@
+#i#############################################################################
+#
+# Makefile
+#
+###############################################################################
+
+HEADERS  = framebuffer.h shader.h kernel.h misc.h bacteria.h
+SOURCES  = main.C framebuffer.C shader.C kernel.C misc.C
+DEPENDS  = $(SOURCES:.C=.d)
+OBJECTS  = $(SOURCES:.C=.o)
+TARGET	 = cells
+
+###############################################################################
+
+ifdef DEBUG
+OPTFLAGS = -g
+else
+OPTFLAGS = -O3 -s
+endif
+
+CC      = g++
+CFLAGS  = -Wall -Wno-format $(OPTFLAGS)
+LDFLAGS = -lGL -lglut -lCg -lCgGL -lGLEW -lm
+
+
+###############################################################################
+
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) $(OBJECTS) $(LDFLAGS) -o $@
+
+clean:
+	$(RM) $(OBJECTS) $(DEPENDS)
+	$(RM) $(TARGET)
+
+.PHONY: all clean
+
+###############################################################################
+
+%.o: %.C
+	$(CC) -c $(CFLAGS) $< -o $@
+
+%.d: %.C
+	$(CC) -MM $< > $@
+
+###############################################################################
+
+ifneq ($(MAKECMDGOALS),clean)
+-include $(DEPENDS)
+endif
+
+###############################################################################

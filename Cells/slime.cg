@@ -1,0 +1,39 @@
+
+float2 N[5] =
+{
+	float2(0, 0),
+	float2(-1, 0),
+	float2(1, 0),
+	float2(0, 1),
+	float2(0, -1),
+};
+
+void main(
+	in float2 coords : TEXCOORD0,
+	uniform samplerRECT buffer0,
+	uniform float slime_decay,
+	uniform float chemo_decay,
+	uniform float chemo_diffuse,
+	out float4 result : COLOR0)
+{
+	//Grab neighbors
+	float4 neighbors[5];
+	for(int i=0; i<5; i++)
+	{
+		neighbors[i] = texRECT(buffer0, coords + N[i]);
+	}
+
+	//Compute new slime value
+	float slime = (1 - slime_decay) * neighbors[0].g;
+
+	//Compute new chemo value
+	float c = 0.0;
+	for(int i=1; i<5; i++)
+	{
+		c += neighbors[i].b;
+	}
+	float chemo = (1 - chemo_decay) * ((1 - chemo_diffuse) * neighbors[0].b + chemo_diffuse * c / 4);
+
+
+	result = float4(0, slime, chemo, 0);
+}
