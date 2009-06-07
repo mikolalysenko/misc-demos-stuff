@@ -1,71 +1,38 @@
 // SDL/OpenGL starter thing
 // Mikola Lysenko
 //
-// Some notes:
-//	F1 - Toggle FPS
-//	F2 - Toggle fullscreen
 //
 //
 
 //Include cstdlib
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 
-#include <sys/time.h>
+
+//Basic engine stuff
+#include "common/sys_includes.h"
+#include "common/input.h"
 
 //Project files
-#include "misc.h"
+#include "project/game.h"
 
 //Namespace aliasing
 using namespace std;
-
-//Constants
-#define WINDOW_NAME		"SDL Shell"
+using namespace Common;
+using namespace Game;
 
 //Application parameters
 SDL_Surface * window;
-int XRes			= 640;
-int YRes			= 480;
-bool paused			= false;
-bool fullscreen		= false;
-float fov			= 45.0f;
-float z_near		= 0.5f;
-float z_far			= 1200.0f;
-
-//Key state modifiers
 
 
-void update_game(float delta_t)
-{
-}
-
-void draw_game()
-{
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	glViewport(0, 0, XRes-1, YRes-1);
-	
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(fov, (float)XRes / (float)YRes, z_near, z_far);
-	
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	
-	glColor3f(1, 1, 1);
-	glBegin(GL_TRIANGLES);
-		glVertex3f(-1, -1, -4);
-		glVertex3f(1, -1, -4);
-		glVertex3f(0, 1, -4);
-	glEnd();
-	
-	glFlush();
-}
-
-void game_loop()
+//Runs the main loop
+void main_loop()
 {
 	float last_time = (float)SDL_GetTicks() / 1000.0f;
+	
+	//Initialize stuff
+	key_init();
+	Game::init();
 	
 	while(true)
 	{
@@ -97,23 +64,51 @@ void game_loop()
 			}
 		}
 		
+		//Update input
+		key_update();
+		
 		//Update game
 		float cur_time = (float)SDL_GetTicks() / 1000.0f;
 		float delta_time = cur_time - last_time;
 		last_time = cur_time;
-		if(!paused)
-			update_game(delta_time);
+		Game::update(delta_time);
 		
-		//Draw game
-		draw_game();
+		//Draw 3D component
+		glClearColor(0, 0, 0, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+		glViewport(0, 0, XRes-1, YRes-1);
+	
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(fov, (float)XRes / (float)YRes, z_near, z_far);
+		
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		
+		Game::draw();
+		
+		
+		//Draw HUD overlays
+		glClear(GL_DEPTH_BUFFER_BIT);
+		
+		glMatrixMode(GL_PROJECTION);
+		glOrtho(0, 1, 1, 0, -1, 1);
+		
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		
+		Game::overlays();
+		
+		//Swap buffers and blit to screen
+		glFlush();
 		SDL_GL_SwapBuffers();
 	}
 }
 
+//Program start point
 int main(int argc, char** argv)
 {
-	srand(time(NULL));
-
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
 		printf("Unable to init SDL: %s\n", SDL_GetError());
@@ -139,9 +134,14 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-
+	GLenum err = glewInit();
+	if(err != GLEW_OK)
+	{
+		printf("Couldn't initialize glew: %s\n", glewGetErrorString(err));
+		exit(1);
+	}
 	
-	game_loop();
+	main_loop();
 	
 	return 0;
 }
