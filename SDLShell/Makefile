@@ -6,6 +6,10 @@
 # The following variable values must be suited to the build environment.
 ###############################################################################
 
+#Path to Eigen2
+EIGENPATH = /home/mikola/Apps/eigen2
+PHYSXPATH = /usr/include/PhysX/v2.8.1/
+
 # name of the file to build
 EXE = ../a.out
 
@@ -24,10 +28,10 @@ srcdir3 = src/project
 builddir = out
 
 # preprocessor options to find all included files
-INC_PATH = -I$(srcdir1)
+INC_PATH = -I$(srcdir1) -I$(EIGENPATH) -I$(PHYSXPATH)/SDKs/Foundation/include -I$(PHYSXPATH)/SDKs/Physics/include -I$(PHYSXPATH)/LowLevel/API/include -I$(PHYSXPATH)/LowLevel/hlcommon/include -I$(PHYSXPATH)/SDKs/PhysXLoader/include -I$(PHYSXPATH)/SDKs/NxCharacter/include  -DLINUX -DNX_DISABLE_FLUIDS
 
 # libraries link options ('-lm' is common to link with the math library)
-LNK_LIBS = -lGLEW -lm  `sdl-config --cflags --libs`
+LNK_LIBS = -lGLEW -lm  `sdl-config --cflags --libs` -lPhysXLoader
 
 # other compilation options
 COMPILE_OPTS = `sdl-config --cflags --libs`

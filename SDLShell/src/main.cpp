@@ -1,33 +1,39 @@
 // SDL/OpenGL starter thing
 // Mikola Lysenko
 //
-//
+// This just contains a bunch of boilerplate initialization code, which is abstracted from the actual callbacks for the application
 //
 
-//Include cstdlib
-#include <cstdlib>
-#include <cstdio>
-
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 //Basic engine stuff
 #include "common/sys_includes.h"
 #include "common/input.h"
+
+//STL
+#include <cstdlib>
+#include <cstdio>
 
 //Project files
 #include "project/game.h"
 
 //Namespace aliasing
 using namespace std;
+using namespace Eigen;
 using namespace Common;
 using namespace Game;
 
 //Application parameters
 SDL_Surface * window;
+Transform3d camera;
 
 
 //Runs the main loop
 void main_loop()
 {
+	camera.setIdentity();
+
 	float last_time = (float)SDL_GetTicks() / 1000.0f;
 	
 	//Initialize stuff
@@ -64,14 +70,12 @@ void main_loop()
 			}
 		}
 		
+		
 		//Update input
 		key_update();
 		
 		//Update game
-		float cur_time = (float)SDL_GetTicks() / 1000.0f;
-		float delta_time = cur_time - last_time;
-		last_time = cur_time;
-		Game::update(delta_time);
+		Game::update();
 		
 		//Draw 3D component
 		glClearColor(0, 0, 0, 0);
@@ -84,10 +88,10 @@ void main_loop()
 		gluPerspective(fov, (float)XRes / (float)YRes, z_near, z_far);
 		
 		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
+		Matrix4d cam_matrix = Game::camera.matrix();
+		glLoadMatrixd((GLdouble*)&cam_matrix);
 		
 		Game::draw();
-		
 		
 		//Draw HUD overlays
 		glClear(GL_DEPTH_BUFFER_BIT);
@@ -103,6 +107,12 @@ void main_loop()
 		//Swap buffers and blit to screen
 		glFlush();
 		SDL_GL_SwapBuffers();
+		
+		//Synchronize frame rate
+		last_time += delta_t * 1000.;
+		long long compute_time = (long long)last_time - (long long)SDL_GetTicks();
+		if(compute_time > 0)
+			SDL_Delay(compute_time);
 	}
 }
 
@@ -141,7 +151,17 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 	
+	//Create physics SDK
+	physx_sdk = NxCreatePhysicsSDK(NX_PHYSICS_SDK_VERSION, NULL, NULL);
+	
+	if(!physx_sdk)
+	{
+		printf("Failed to initialize PhysX\n");
+		return 1;
+	}
+	
 	main_loop();
+	
 	
 	return 0;
 }
