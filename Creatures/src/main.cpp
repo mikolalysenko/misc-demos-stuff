@@ -4,9 +4,6 @@
 // This just contains a bunch of boilerplate initialization code, which is abstracted from the actual callbacks for the application
 //
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-
 //Basic engine stuff
 #include "common/sys_includes.h"
 #include "common/input.h"
@@ -21,7 +18,6 @@
 
 //Namespace aliasing
 using namespace std;
-using namespace Eigen;
 using namespace Common;
 using namespace Game;
 
@@ -90,8 +86,7 @@ void main_loop()
 		gluPerspective(fov, (float)XRes / (float)YRes, z_near, z_far);
 		
 		glMatrixMode(GL_MODELVIEW);
-		Matrix4d cam_matrix = Game::camera.matrix();
-		glLoadMatrixd((GLdouble*)&cam_matrix);
+		glLoadIdentity();
 		
 		Game::draw();
 		
