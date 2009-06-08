@@ -1,7 +1,3 @@
-//Eigen stuff
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-
 //Engine stuff
 #include "common/sys_includes.h"
 #include "common/input.h"
@@ -14,7 +10,6 @@
 #include <vector>
 
 using namespace std;
-using namespace Eigen;
 using namespace Common;
 
 namespace Game
@@ -32,8 +27,6 @@ float delta_t		= 1. / 60.;
 //Initialization
 void init()
 {
-	//Initialize camera
-	camera.setIdentity();
 }
 
 

@@ -1,9 +1,7 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-
+#include "common/sys_includes.h"
 
 //Game configuration variables
 namespace Game
@@ -14,7 +12,6 @@ namespace Game
 	
 	//Camera variables
 	extern float fov, z_near, z_far;
-	extern Eigen::Transform3d camera;	//Camera frame
 	
 	//Time quantum
 	extern float delta_t;

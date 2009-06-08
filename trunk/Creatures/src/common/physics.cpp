@@ -13,8 +13,8 @@ namespace Common
 	void phys_init()
 	{
 		//Create the SDK
-		phys_sdk = NxCreatePhysicsSDK(NX_PHYSICS_SDK_VERSION);
-		if(phys_sdk == NULL)
+		sdk = NxCreatePhysicsSDK(NX_PHYSICS_SDK_VERSION);
+		if(sdk == NULL)
 		{
 			printf("Failed to initialize PhysX\n");
 			exit(1);
