@@ -61,7 +61,7 @@ struct Edge
 
 
 //A creature phenotype
-struct Phenotype
+struct Genotype
 {
 	
 	//Phenotype graph
@@ -69,9 +69,9 @@ struct Phenotype
 	vector< vector<Edge> >	edges;
 	
 	//Constructors
-	Phenotype() {}
-	Phenotype(const Phenotype& t) : nodes(t.nodes), edges(t.edges) {}
-	Phenotype operator=(const Phenotype& t)
+	Genotype() {}
+	Genotype(const Genotype& t) : nodes(t.nodes), edges(t.edges) {}
+	Genotype operator=(const Genotype& t)
 	{
 		nodes = t.nodes;
 		edges = t.edges;
@@ -80,13 +80,13 @@ struct Phenotype
 
 	//Save/load phenotypes from file
 	void save(ostream& os) const;
-	static Phenotype load(istream& is);
+	static Genotype load(istream& is);
 	
 	//Generates a creature from this graph
 	Creature* createCreature() const;
 	
 	//Creates a mutated version of this phenotype
-	Phenotype mutate() const;
+	Genotype mutate() const;
 };
 
 
