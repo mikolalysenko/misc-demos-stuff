@@ -75,6 +75,9 @@ void main_loop()
 		//Update game
 		Game::update();
 		
+		// Start simulation (non blocking)
+		scene->simulate(delta_t);
+		
 		//Draw 3D component
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -104,6 +107,10 @@ void main_loop()
 		//Swap buffers and blit to screen
 		glFlush();
 		SDL_GL_SwapBuffers();
+		
+		//Wait for physics calculations to finish
+		scene->flushStream();
+		scene->fetchResults(NX_RIGID_BODY_FINISHED, true);
 		
 		//Synchronize frame rate
 		last_time += delta_t * 1000.;

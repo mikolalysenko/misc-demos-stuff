@@ -3,7 +3,13 @@
 
 namespace Common
 {
+	//PhysX variables
+	extern NxPhysicsSDK*	sdk;
+	extern NxScene*			scene;
+
+	//Initialize physics
 	void phys_init();
+	
 };
 
 
