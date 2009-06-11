@@ -7,7 +7,7 @@
 #include "common/physics.h"
 
 #include "project/creature.h"
-#include "project/phenotype.h"
+#include "project/genotype.h"
 
 using namespace std;
 using namespace Common;
@@ -111,9 +111,9 @@ Edge Edge::load(istream& is)
 
 
 //Save the phenotype
-void Phenotype::save(ostream& os) const
+void Genotype::save(ostream& os) const
 {
-	os	<< "PHENOTYPE" << endl
+	os	<< "GENOTYPE" << endl
 		<< nodes.size() << endl;
 	
 	for(int i=0; i<(int)nodes.size(); i++)
@@ -126,15 +126,15 @@ void Phenotype::save(ostream& os) const
 }
 
 //Restore the phenotype
-Phenotype Phenotype::load(istream& is)
+Genotype Genotype::load(istream& is)
 {
-	assert_token(is, "PHENOTYPE");
+	assert_token(is, "GENOTYPE");
 	
 	int n_nodes;
 	if(!(is >> n_nodes))
 		throw "Error reading number of nodes/edges";
 		
-	Phenotype res;
+	Genotype res;
 	res.nodes.resize(n_nodes);
 	res.edges.resize(n_nodes);
 	
@@ -157,6 +157,12 @@ Phenotype Phenotype::load(istream& is)
 	return res;
 }
 
+
+//Constructs a creature from the phenotype
+Creature* Genotype::createCreature() const
+{
+
+}
 
 
 
