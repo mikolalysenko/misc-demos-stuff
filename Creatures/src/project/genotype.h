@@ -14,13 +14,6 @@ namespace Game
 using namespace std;
 
 
-enum BodyPartType
-{
-	BODY_BOX,
-	BODY_CAPSULE,
-	BODY_SPHERE,
-};
-
 //Generates some body part
 struct Node
 {
@@ -43,15 +36,22 @@ struct Node
 //A link between two phenotypes
 struct Edge
 {
+	//If true, edge is active
+	bool marked;
+
 	//Number of times this edge may be traversed
 	int source, target;
 	
 	//Frame of reference for new body part
 	NxQuat rot;
 	NxVec3 trans;
+	float scale;
 	
 	//Joint information (must be a hinge)
 	NxVec3	axis;
+
+	//Constructor
+	Edge() : marked(false) {}	
 
 	//Serialization
 	void save(ostream& os) const;
@@ -65,6 +65,7 @@ struct Genotype
 {
 	
 	//Phenotype graph
+	int						root;
 	vector<Node>			nodes;
 	vector< vector<Edge> >	edges;
 	
@@ -83,7 +84,9 @@ struct Genotype
 	static Genotype load(istream& is);
 	
 	//Generates a creature from this graph
-	Creature* createCreature() const;
+	Creature* createCreature(NxMat34 pose);
+	Creature* createCreature() { NxMat34 tmp; tmp.id(); return createCreature(tmp); }
+
 	
 	//Creates a mutated version of this phenotype
 	Genotype mutate() const;

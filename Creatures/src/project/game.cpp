@@ -6,9 +6,11 @@
 //Project stuff
 #include "project/game.h"
 #include "project/creature.h"
+#include "project/genotype.h"
 
 //STL stuff
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 using namespace std;
@@ -57,13 +59,44 @@ void init_scenario()
 //Initialization
 void init()
 {
+	init_creatures();
+
 	//Set up the environment
 	init_scenario();
 
-	//Create some dumb creature
+/*
+	//Create a test creature
 	critter = new Creature();
+	NxMat34 pose;
+	pose.t = NxVec3(0, 20, -50);
+	critter->root = new BodyPart(
+		critter,
+		NxVec3(1,.5,1),
+		pose,
+		NxVec3(.1, 5, .2));
+	critter->body.push_back(critter->root);
+*/
 	
-	
+	try
+	{
+		ifstream fin("data/test.dna");
+		Genotype test = Genotype::load(fin);
+		test.save(cout);
+		
+		NxMat34 frame;
+		frame.id();
+		frame.t = NxVec3(0, 0, -50);
+		
+		critter = test.createCreature(frame);
+	}
+	catch(const char *err)
+	{
+		cerr << "Error loading creature: " << err << endl;	
+	}
+	catch(const string err)
+	{
+		cerr << "Error loading creature: " << err << endl;	
+	}
 }
 
 
