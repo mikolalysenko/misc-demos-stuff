@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <utility>
+#include <cmath>
 
 #include "common/sys_includes.h"
 #include "common/physics.h"
@@ -93,10 +95,19 @@ void Edge::save(ostream& os) const
 {
 	os << "EDGE " 
 		<< source  << ' ' << target  << ' '
-		<< scale
 		<< rot.w   << ' ' << rot.x   << ' ' << rot.y   << ' ' << rot.z << ' '
-		<< trans.x << ' ' << trans.y << ' ' << trans.z << ' '
-		<< axis.x  << ' ' << axis.y  << ' ' << axis.z
+		<< scale  << ' '
+		<< reflect << ' '
+
+		<< s_point.x  << ' ' << s_point.y  << ' ' << s_point.z  << ' '
+		<< t_point.x  << ' ' << t_point.y  << ' ' << t_point.z  << ' '
+
+		<< s_axis.x  << ' ' << s_axis.y  << ' ' << s_axis.z  << ' '
+		<< t_axis.x  << ' ' << t_axis.y  << ' ' << t_axis.z  << ' '
+
+		<< s_norm.x  << ' ' << s_norm.y  << ' ' << s_norm.z  << ' '
+		<< t_norm.x  << ' ' << t_norm.y  << ' ' << t_norm.z  << ' '
+
 		<< endl;
 }
 
@@ -107,11 +118,20 @@ Edge Edge::load(istream& is)
 	Edge res;
 	if(!(is
 		>> res.source  >> res.target
-		>> res.scale
 		>> res.rot.w   >> res.rot.x   >> res.rot.y   >> res.rot.z
-		>> res.trans.x >> res.trans.y >> res.trans.z
-		>> res.axis.x  >> res.axis.y  >> res.axis.z))
-			throw "Invalid edge";
+		>> res.scale
+		>> res.reflect
+
+		>> res.s_point.x  >> res.s_point.y  >> res.s_point.z
+		>> res.t_point.x  >> res.t_point.y  >> res.t_point.z
+
+		>> res.s_axis.x  >> res.s_axis.y  >> res.s_axis.z
+		>> res.t_axis.x  >> res.t_axis.y  >> res.t_axis.z
+		
+		>> res.s_norm.x  >> res.s_norm.y  >> res.s_norm.z
+		>> res.t_norm.x  >> res.t_norm.y  >> res.t_norm.z
+		
+		)) throw "Invalid edge";
 	return res;
 }
 
@@ -161,6 +181,13 @@ Genotype Genotype::load(istream& is)
 		}
 	}
 	
+	//Fix up edges
+	for(int i=0; i<(int)res.edges.size(); i++)
+	{
+		for(int j=0; j<(int)res.edges[i].size(); j++)
+			res.edges[i][j].normalize(res);
+	}
+	
 	return res;
 }
 
@@ -171,10 +198,9 @@ BodyPart* genCreatureRec(
 	Creature*			creature,
 	int 				n,
 	NxMat34				pose,
-	float				scale)
+	float				scale,
+	float				reflect)
 {
-	//TODO: Implement this
-
 	Node& node = genes.nodes[n];
 
 	//Generate the part at this node
@@ -186,9 +212,13 @@ BodyPart* genCreatureRec(
 		break;
 	
 		case BODY_SPHERE:
+			//TODO: Not yet implemented
+			assert(false);
 		break;
 	
 		case BODY_CAPSULE:
+			//TODO: Not yet implemented
+			assert(false);
 		break;
 	}
 
@@ -212,9 +242,13 @@ BodyPart* genCreatureRec(
 			continue;
 		edge.marked = true;
 		
+		//Compute translation from attachment points
+		NxVec3 s_point = edge.s_point * scale, 
+			   t_point = edge.rot.rot(edge.t_point * scale * edge.scale);
+		
 		//Transform frame
 		NxMat34 xform;
-		xform.t = edge.trans;
+		xform.t = t_point - s_point;
 		xform.M = NxMat33(edge.rot);
 		NxMat34 npose = xform * pose;
 		
@@ -224,7 +258,8 @@ BodyPart* genCreatureRec(
 			creature, 
 			edge.target, 
 			npose, 
-			scale * edge.scale);
+			scale * edge.scale,
+			reflect * edge.reflect);
 		
 		//If failed, then skip it
 		if(tmp == NULL)
@@ -236,12 +271,20 @@ BodyPart* genCreatureRec(
 		//Create joint and link parts
 		NxRevoluteJointDesc joint_desc;
 		joint_desc.setToDefault();
-		joint_desc.actor[0] = res->actor;
-		joint_desc.actor[1] = tmp->actor;
-		joint_desc.setGlobalAxis(pose.M * edge.axis);
-		joint_desc.setGlobalAnchor( pose * (0.5 * edge.trans));
+		
+		joint_desc.actor[0] = 			res->actor;
+		joint_desc.localAnchor[0] =		edge.s_point * scale;
+		joint_desc.localAxis[0] =		edge.s_axis;
+		joint_desc.localNormal[0] = 	edge.s_norm;
+		
+		joint_desc.actor[1] = 			tmp->actor;
+		joint_desc.localAnchor[1] =		edge.t_point * scale * edge.scale;
+		joint_desc.localAxis[1] =		edge.t_axis;
+		joint_desc.localNormal[1] = 	edge.t_norm;
 		
 	    NxRevoluteJoint * joint = static_cast<NxRevoluteJoint*>(scene->createJoint(joint_desc));
+	    
+	    //TODO: Fix positions such that they are 
 	    
 	    res->attachPart(tmp, joint);
 
@@ -260,7 +303,7 @@ Creature* Genotype::createCreature(NxMat34 pose)
 	Creature* res = new Creature();
 
 	//Generate a body schema
-	BodyPart* b = genCreatureRec(*this, res, root, pose, 1.);
+	BodyPart* b = genCreatureRec(*this, res, root, pose, 1., 1.);
 	
 	//Check for failure
 	if(b == NULL)
@@ -274,7 +317,72 @@ Creature* Genotype::createCreature(NxMat34 pose)
 	return res;
 }
 
+NxVec3 Node::closest_pt(const NxVec3& p)
+{
+	NxVec3 res = p;
 
+	switch(shape)
+	{
+		case BODY_BOX:
+			for(int i=0; i<3; i++)
+				res[i] = max(min(p[i], size[i]), -size[i]);
+			for(int i=0; i<3; i++)
+			{
+				if(abs(res[i]) >= size[i] &&
+					abs(res[i]) > size[(i+1)%3] &&
+					abs(res[i]) > size[(i+2)%3])
+				{
+					if(res[i] < 0)
+						res[i] = -size[i];
+					else
+						res[i] = size[i];
+				}
+			}
+			
+			return res;
+		break;
+		
+		case BODY_SPHERE:
+			//TODO: Implement sphere code
+			assert(false);
+		break;
+		
+		case BODY_CAPSULE:
+			//TODO: Implement capsule code
+			assert(false);
+		break;
+		
+		default:
+			assert(false);
+		break;
+	}
+	return p;
+}
+
+//Normalizes an edge
+void Edge::normalize(Genotype& gen)
+{
+	//Fix up the quaternion
+	rot.normalize();
+
+	//Fix points to surface of bodies
+	s_point = gen.nodes[source].closest_pt(s_point);
+	t_point = gen.nodes[source].closest_pt(t_point);
+
+	//Renormalize edge frame
+	s_axis /= s_axis.magnitude();
+	t_axis /= t_axis.magnitude();
+	
+	s_norm -= s_axis * s_axis.dot(s_norm) / s_norm.magnitude();
+	s_norm /= s_norm.magnitude();
+	
+	t_norm -= t_axis * t_axis.dot(t_norm) / t_norm.magnitude();
+	t_norm /= t_norm.magnitude();
+	
+	//Fix up reflection
+	if(reflect < 0)	reflect = -1;
+	else			reflect =  1;
+}
 
 
 };

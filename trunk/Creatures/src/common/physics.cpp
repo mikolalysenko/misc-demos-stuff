@@ -1,5 +1,6 @@
 #include "common/sys_includes.h"
 #include "physics.h"
+#include <vector>
 
 using namespace std;
 
@@ -9,6 +10,9 @@ namespace Common
 	//PhysX variables
 	NxPhysicsSDK*	sdk;
 	NxScene*		scene;
+	
+	//Actor group stuff
+	vector<NxActorGroup> actor_groups;
 	
 	void phys_init()
 	{
@@ -24,5 +28,24 @@ namespace Common
 		NxSceneDesc scene_desc;
 		scene_desc.gravity = NxVec3(0.f, -9.81f, 0.f);
 		scene = sdk->createScene(scene_desc);
+		
+		//Just fill with set of numbers
+		actor_groups.resize(65535);
+		for(int i=1; i<65536; i++)
+			actor_groups[i] = i;
 	}
+	
+	NxActorGroup get_group()
+	{
+		NxActorGroup res = actor_groups[actor_groups.size()-1];
+		actor_groups.pop_back();
+		return res;
+	}
+	
+	void release_group(NxActorGroup group)
+	{
+		actor_groups.push_back(group);
+	}
+
+	
 };

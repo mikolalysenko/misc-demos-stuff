@@ -83,12 +83,13 @@ void BodyPart::init_shape(NxShapeDesc* shape_desc, const NxMat34& pose)
 	actorDesc.body			= &bodyDesc;
 	actorDesc.density		= 10.0f;
 	actorDesc.globalPose	= pose;
+	actorDesc.group			= owner->group;
 	
 	//Create the actor
 	actor = scene->createActor(actorDesc);
 	actor->userData = (void*)this;
 	
-	//TODO: Validate actor
+	//TODO: Validate actor, check collisions
 }
 
 //Box constructor
@@ -153,6 +154,22 @@ void BodyPart::draw() const
 	glCallList(shape_lists + (int)shape);
 	
 	glPopMatrix();
+}
+
+//Acquire group
+Creature::Creature()
+{
+	group = get_group();
+	
+	cout << "here!" << endl;
+}
+
+//Release stuff
+Creature::~Creature()
+{
+	for(int i=0; i<(int)body.size(); i++)
+		delete body[i];
+	release_group(group);
 }
 
 
