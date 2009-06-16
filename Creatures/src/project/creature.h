@@ -2,6 +2,7 @@
 #define CREATURE_H
 
 #include "common/sys_includes.h"
+#include "project/circuit.h"
 #include <vector>
 
 namespace Game
@@ -70,7 +71,7 @@ struct BodyPart
 	float						radius;
 	float						length;
 		
-	//TODO: Add material properties here
+	//TODO: Add material properties
 	
 private:
 
@@ -81,12 +82,22 @@ private:
 //Creature data
 struct Creature
 {
+	//Constructor/destructor for creature
+	Creature();
+	~Creature();
+
 	//Draws the critter
 	void draw() const;
 	
 	//Body information for the creature
 	BodyPart*			root;
 	vector<BodyPart*>	body;
+	
+	//Actor group for this creature
+	NxActorGroup		group;
+	
+	//The creature's brain
+	Circuit*			nerves;
 };
 
 };

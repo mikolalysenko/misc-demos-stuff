@@ -81,6 +81,7 @@ void main_loop()
 		//Draw 3D component
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
 	
 		glViewport(0, 0, XRes-1, YRes-1);
 	

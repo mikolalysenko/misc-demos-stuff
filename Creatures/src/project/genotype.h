@@ -30,6 +30,9 @@ struct Node
 	//Serialization
 	void save(ostream& os) const;
 	static Node load(istream& is);
+	
+	//Gets the closest point to the surface of this body
+	NxVec3 closest_pt(const NxVec3& x);
 };
 
 
@@ -44,11 +47,13 @@ struct Edge
 	
 	//Frame of reference for new body part
 	NxQuat rot;
-	NxVec3 trans;
 	float scale;
+	int reflect;
 	
 	//Joint information (must be a hinge)
-	NxVec3	axis;
+	NxVec3	s_axis,  t_axis,
+			s_norm,  t_norm,
+			s_point, t_point;
 
 	//Constructor
 	Edge() : marked(false) {}	
@@ -56,6 +61,9 @@ struct Edge
 	//Serialization
 	void save(ostream& os) const;
 	static Edge load(istream& is);
+	
+	//Normalizes the edge
+	void normalize(struct Genotype& gen);
 };
 
 
@@ -87,7 +95,6 @@ struct Genotype
 	Creature* createCreature(NxMat34 pose);
 	Creature* createCreature() { NxMat34 tmp; tmp.id(); return createCreature(tmp); }
 
-	
 	//Creates a mutated version of this phenotype
 	Genotype mutate() const;
 };

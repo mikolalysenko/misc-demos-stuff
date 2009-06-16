@@ -10,6 +10,9 @@ namespace Common
 	//Initialize physics
 	void phys_init();
 	
+	//Actor group stuff
+	NxActorGroup get_group();
+	void release_group(NxActorGroup);
 };
 
 
