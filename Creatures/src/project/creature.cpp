@@ -160,8 +160,6 @@ void BodyPart::draw() const
 Creature::Creature()
 {
 	group = get_group();
-	
-	cout << "here!" << endl;
 }
 
 //Release stuff

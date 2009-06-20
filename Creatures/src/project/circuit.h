@@ -12,27 +12,20 @@ namespace Game
 struct Wire
 {
 	//Used for connecting gates
-	Wire() : ptr(NULL), val(0.) {}
-	Wire(float* ptr_) : ptr(ptr_) {}
+	Wire() : val(0.) {}
 
 	//Channel operators
 	float read()
 	{
-		if(ptr == NULL)
-			return val;
-		return *ptr;	
+		return val;
 	}
 	
 	void write(float f)
 	{
-		if(ptr == NULL)
-			val = f;
-		else
-			*ptr = f;
+		val = f;
 	}
 
 private:
-	float *ptr;
 	float val;
 };
 	
