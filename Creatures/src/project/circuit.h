@@ -11,16 +11,38 @@ namespace Game
 //A wire connecting two gates
 struct Wire
 {
+	//Used for connecting gates
+	Wire() : ptr(NULL), val(0.) {}
+	Wire(float* ptr_) : ptr(ptr_) {}
+
+	//Channel operators
+	float read()
+	{
+		if(ptr == NULL)
+			return val;
+		return *ptr;	
+	}
 	
+	void write(float f)
+	{
+		if(ptr == NULL)
+			val = f;
+		else
+			*ptr = f;
+	}
+
+private:
+	float *ptr;
+	float val;
 };
 	
 //A control gate
 struct Gate
 {
-	virtual ~Gate();
+	virtual ~Gate() {}
 	
 	//Updates the logic gate
-	virtual void update();
+	virtual void update() = 0;
 	
 	//Outputs/inputs to the gates
 	std::vector<Wire*>		inputs;
@@ -30,19 +52,19 @@ struct Gate
 //The gate factory creates gates
 struct GateFactory
 {
-	virtual ~GateFactory();
+	virtual ~GateFactory() {}
 
 	//Returns the number of parameters required to construct a gate
-	virtual int numParams();
+	virtual int numParams() = 0;
 	
 	//Generates a random vector of parameters
-	virtual std::vector<float> generateParams();
+	virtual std::vector<float> generateParams() = 0;
 	
 	//Normalizes the parameter vector
-	virtual void normalize(std::vector<float> params);
+	virtual void normalize(std::vector<float>& params) = 0;
 	
 	//Creates a gate
-	virtual Gate* createGate(std::vector<float> params);
+	virtual Gate* createGate(std::vector<float> params) = 0;
 	
 };
 
@@ -65,6 +87,7 @@ struct Circuit
 
 extern void registerGateFactory(const std::string& name, GateFactory* factory);
 extern GateFactory* getFactory(const std::string& name);
+extern std::string randomGateName();
 
 
 

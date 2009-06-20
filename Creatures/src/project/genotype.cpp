@@ -284,8 +284,6 @@ BodyPart* genCreatureRec(
 		
 	    NxRevoluteJoint * joint = static_cast<NxRevoluteJoint*>(scene->createJoint(joint_desc));
 	    
-	    //TODO: Fix positions such that they are 
-	    
 	    res->attachPart(tmp, joint);
 
 		//Unmark used edge
