@@ -12,6 +12,18 @@ using namespace std;
 
 extern void init_creatures();
 
+//A sensor is used to acquire input from the environment for the creature's control network
+struct Sensor
+{
+	vector<Wire*>	outputs;
+};
+
+//An effector is a terminal node in a creature's neural network.  It controls the actuators/motors of the creature's limbs
+struct Effector
+{
+	vector<Wire*>	inputs;
+};
+
 //Body part type
 enum BodyPartType
 {
@@ -73,6 +85,9 @@ struct BodyPart
 		
 	//TODO: Add material properties
 	
+	//Local control circuit for this creature
+	Circuit*					controls;
+	
 private:
 
 	//Initializes the shape given the particular shape descriptor
@@ -95,9 +110,6 @@ struct Creature
 	
 	//Actor group for this creature
 	NxActorGroup		group;
-	
-	//The creature's brain
-	Circuit*			nerves;
 };
 
 };

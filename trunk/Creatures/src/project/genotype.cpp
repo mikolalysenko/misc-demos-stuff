@@ -25,6 +25,67 @@ void assert_token(istream& is, const string& token)
 		throw "Expected token: " + token;
 }
 
+//Saves a gate edge
+void GateEdge::save(ostream& os) const
+{
+	os << "WIRE " << source_node << ' ' << source_gate << ' '
+				  << target_node << ' ' << target_gate << endl;
+}
+
+GateEdge GateEdge::load(istream& is)
+{
+	assert_token(is, "WIRE");
+	
+	GateEdge res;
+	
+	if(!(is 
+		>> res.source_node >> res.source_gate
+		>> res.target_node >> res.target_gate))
+	{
+		throw "Invalid wire";
+	}
+	
+	return res;
+}
+
+//Gate nodes
+void GateNode::save(ostream& os) const
+{
+	os << "GATE " << name << ' ' << params.size();
+	for(int i=0; i<(int)params.size(); i++)
+		os << ' ' << params[i];
+	os << endl << wires.size() << endl;
+	for(int i=0; i<(int)wires.size(); i++)
+		wires[i].save(os);
+}
+
+GateNode GateNode::load(istream& is)
+{
+	assert_token(is, "GATE");
+	
+	GateNode res;
+	int num_params;
+	if(!(is >> res.name >> num_params))
+	{	throw "Error reading gate description";
+	}
+	
+	res.params.resize(num_params);
+	for(int i=0; i<num_params; i++)
+	{	if(!(is >> res.params[i]))
+		{	throw "Error reading gate parameter";
+		}
+	}
+	
+	int num_wires;
+	if(!(is >> num_wires))
+		throw "Error reading wire count";
+	res.wires.resize(num_wires);
+	for(int i=0; i<num_wires; i++)
+		res.wires[i] = GateEdge::load(is);
+
+	return res;
+}
+
 //Node saving
 void Node::save(ostream& os) const
 {
@@ -47,8 +108,9 @@ void Node::save(ostream& os) const
 		default:
 			assert(false);
 	}
-	
-	os << endl;
+	os << endl << gates.size() << endl;
+	for(int i=0; i<(int)gates.size(); i++)
+		gates[i].save(os);
 }
 
 //Node loading
@@ -85,6 +147,18 @@ Node Node::load(istream& is)
 	else
 	{
 		throw "Unknown node shape: " + s;
+	}
+	
+	//Read in the gate descriptors
+	int num_gates;
+	if(!(is >> num_gates))
+	{
+		throw "Expected gate count";
+	}
+	res.gates.resize(num_gates);
+	for(int i=0; i<num_gates; i++)
+	{
+		res.gates[i] = GateNode::load(is);
 	}
 	
 	return res;
