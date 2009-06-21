@@ -57,7 +57,23 @@ void init_creatures()
 	//Generate sphere list
 	glNewList(shape_lists+1, GL_COMPILE);
 	glBegin(GL_TRIANGLES);
-		//TODO: Sphere drawing goes here
+		
+		float d_theta = M_PI/32.f,
+				d_phi = M_PI/16.f;
+		
+		for(float theta=-M_PI; theta<=M_PI; theta+=d_theta)
+		for(float phi=-M_PI/2.; phi<=M_PI/2.; phi+=d_phi)
+		{
+			
+			glVertex3f(cos(theta) * cos(phi), sin(theta) * cos(phi), sin(phi));
+			glVertex3f(cos(theta+d_theta) * cos(phi), sin(theta+d_theta) * cos(phi), sin(phi));
+			glVertex3f(cos(theta) * cos(phi+d_phi), sin(theta) * cos(phi+d_phi), sin(phi+d_phi));
+			
+			glVertex3f(cos(theta+d_theta) * cos(phi), sin(theta+d_theta) * cos(phi), sin(phi));
+			glVertex3f(cos(theta) * cos(phi+d_phi), sin(theta) * cos(phi+d_phi), sin(phi+d_phi));
+			glVertex3f(cos(theta+d_theta) * cos(phi+d_phi), sin(theta+d_theta) * cos(phi+d_phi), sin(phi+d_phi));
+		}
+		
 	glEnd();
 	glEndList();
 	
@@ -68,6 +84,35 @@ void init_creatures()
 		//TODO: Capsule drawing
 	glEnd();
 	glEndList();
+}
+
+//Retrieves information about relative joint information
+void JointSensor::update()
+{
+	NxActor* a;
+	NxActor* b;
+	joint->getActors(&a, &b);
+	
+	NxQuat qa = a->getGlobalOrientationQuat(),
+			qb = b->getGlobalOrientationQuat();
+			
+	qa.invert();
+	qb *= qa;
+	
+	write(0, qb.getAngle());
+	write(1, joint->getVelocity());
+}
+
+//A joint effector drives the creature's motion
+void JointEffector::update()
+{
+	NxMotorDesc desc;
+	
+	desc.freeSpin = (read(1) < 1.);
+	desc.maxForce = max_force;
+	desc.velTarget = read(0);
+	
+	joint->setMotor(desc);
 }
 
 //Initialize the body part
@@ -91,6 +136,7 @@ void BodyPart::init_shape(NxShapeDesc* shape_desc, const NxMat34& pose)
 	
 	//TODO: Validate actor, check collisions
 }
+
 
 //Box constructor
 BodyPart::BodyPart(
@@ -156,6 +202,26 @@ void BodyPart::draw() const
 	glPopMatrix();
 }
 
+//Update each control
+void BodyPart::update()
+{
+	for(int i=0; i<(int)sensors.size(); i++)
+		sensors[i]->update();
+	for(int i=0; i<(int)controls.size(); i++)
+		controls[i]->update();
+	for(int i=0; i<(int)effectors.size(); i++)
+		effectors[i]->update();
+}
+
+void BodyPart::attachPart(BodyPart* part, NxRevoluteJoint* joint, float strength)
+{
+	limbs.push_back(part);
+	joints.push_back(joint);
+	effectors.push_back(new JointEffector(joint, strength));
+	sensors.push_back(new JointSensor(joint));
+}
+
+
 //Acquire group
 Creature::Creature()
 {
@@ -176,6 +242,13 @@ void Creature::draw() const
 {
 	for(int i=0; i<(int)body.size(); i++)
 		body[i]->draw();
+}
+
+//Updates creature (incl. logic, contact sensors, etc.)
+void Creature::update()
+{
+	for(int i=0; i<(int)body.size(); i++)
+		body[i]->update();
 }
 
 };

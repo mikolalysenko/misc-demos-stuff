@@ -13,15 +13,24 @@ using namespace std;
 extern void init_creatures();
 
 //A sensor is used to acquire input from the environment for the creature's control network
-struct Sensor
+struct JointSensor : Gate
 {
-	vector<Wire*>	outputs;
+	NxRevoluteJoint* joint;
+	
+	JointSensor(NxRevoluteJoint* joint_) : joint(joint_) {}
+	virtual ~JointSensor() {}
+	virtual void update();
 };
 
 //An effector is a terminal node in a creature's neural network.  It controls the actuators/motors of the creature's limbs
-struct Effector
+struct JointEffector : Gate
 {
-	vector<Wire*>	inputs;
+	NxRevoluteJoint* joint;
+	float max_force;
+	
+	JointEffector(NxRevoluteJoint* joint_, float max_f) : joint(joint_), max_force(max_f) {}
+	virtual ~JointEffector() {}
+	virtual void update();
 };
 
 //Body part type
@@ -63,12 +72,11 @@ struct BodyPart
 	//Draws the actual body part
 	void draw() const;
 	
+	//Updates internal state variables
+	void update();
+	
 	//Adds a limb to the object
-	void attachPart(BodyPart* part, NxRevoluteJoint* joint)
-	{
-		limbs.push_back(part);
-		joints.push_back(joint);
-	}
+	void attachPart(BodyPart* part, NxRevoluteJoint* joint, float strength);
 	
 	//Attributes common to all body parts
 	NxVec3						color;	//Color of the part
@@ -86,7 +94,10 @@ struct BodyPart
 	//TODO: Add material properties
 	
 	//Local control circuit for this creature
-	Circuit*					controls;
+	vector<Gate*>				controls;
+	vector<Gate*>				sensors;
+	vector<Gate*>				effectors;
+	vector<Wire*>				wires;
 	
 private:
 
@@ -103,6 +114,9 @@ struct Creature
 
 	//Draws the critter
 	void draw() const;
+	
+	//Updates the creature
+	void update();
 	
 	//Body information for the creature
 	BodyPart*			root;

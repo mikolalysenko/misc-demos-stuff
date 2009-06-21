@@ -28,8 +28,9 @@ void assert_token(istream& is, const string& token)
 //Saves a gate edge
 void GateEdge::save(ostream& os) const
 {
-	os << "WIRE " << source_node << ' ' << source_gate << ' '
-				  << target_node << ' ' << target_gate << endl;
+	os << "WIRE " << node_type << ' ' << node << ' '
+				  << gate_type << ' ' << gate << ' ' 
+				  << direction << endl;
 }
 
 GateEdge GateEdge::load(istream& is)
@@ -37,13 +38,18 @@ GateEdge GateEdge::load(istream& is)
 	assert_token(is, "WIRE");
 	
 	GateEdge res;
+	int nt, gt;
 	
 	if(!(is 
-		>> res.source_node >> res.source_gate
-		>> res.target_node >> res.target_gate))
+		>> nt >> res.node
+		>> gt >> res.gate
+		>> res.direction))
 	{
 		throw "Invalid wire";
 	}
+	
+	res.node_type = (NodeType)nt;
+	res.gate_type = (GateType)gt;
 	
 	return res;
 }
@@ -266,129 +272,6 @@ Genotype Genotype::load(istream& is)
 }
 
 
-//Generates a body part
-BodyPart* genCreatureRec(
-	Genotype&			genes,
-	Creature*			creature,
-	int 				n,
-	NxMat34				pose,
-	float				scale,
-	float				reflect)
-{
-	Node& node = genes.nodes[n];
-
-	//Generate the part at this node
-	BodyPart* res;
-	switch(node.shape)
-	{
-		case BODY_BOX:
-			res = new BodyPart(creature, node.color, pose, node.size * scale);
-		break;
-	
-		case BODY_SPHERE:
-			//TODO: Not yet implemented
-			assert(false);
-		break;
-	
-		case BODY_CAPSULE:
-			//TODO: Not yet implemented
-			assert(false);
-		break;
-	}
-
-	//If fails, then return NULL
-	if(res->actor == NULL)
-	{
-		delete res;
-		return NULL;
-	}
-
-	//Add body part to body vector
-	creature->body.push_back(res);
-	
-	//For each edge:
-	for(int i=0; i<(int)genes.edges[n].size(); i++)
-	{
-		Edge& edge = genes.edges[n][i];
-		
-		//Check for mark
-		if(edge.marked)
-			continue;
-		edge.marked = true;
-		
-		//Compute translation from attachment points
-		NxVec3 s_point = edge.s_point * scale, 
-			   t_point = edge.rot.rot(edge.t_point * scale * edge.scale);
-		
-		//Transform frame
-		NxMat34 xform;
-		xform.t = t_point - s_point;
-		xform.M = NxMat33(edge.rot);
-		NxMat34 npose = xform * pose;
-		
-		//Generate new part
-		BodyPart* tmp = genCreatureRec(
-			genes, 
-			creature, 
-			edge.target, 
-			npose, 
-			scale * edge.scale,
-			reflect * edge.reflect);
-		
-		//If failed, then skip it
-		if(tmp == NULL)
-		{
-			edge.marked = false;
-			continue;
-		}
-
-		//Create joint and link parts
-		NxRevoluteJointDesc joint_desc;
-		joint_desc.setToDefault();
-		
-		joint_desc.actor[0] = 			res->actor;
-		joint_desc.localAnchor[0] =		edge.s_point * scale;
-		joint_desc.localAxis[0] =		edge.s_axis;
-		joint_desc.localNormal[0] = 	edge.s_norm;
-		
-		joint_desc.actor[1] = 			tmp->actor;
-		joint_desc.localAnchor[1] =		edge.t_point * scale * edge.scale;
-		joint_desc.localAxis[1] =		edge.t_axis;
-		joint_desc.localNormal[1] = 	edge.t_norm;
-		
-	    NxRevoluteJoint * joint = static_cast<NxRevoluteJoint*>(scene->createJoint(joint_desc));
-	    
-	    res->attachPart(tmp, joint);
-
-		//Unmark used edge
-	 	edge.marked = false;
-	}
-	
-	return res;
-}
-	
-	
-
-//Constructs a creature from the genotype
-Creature* Genotype::createCreature(NxMat34 pose)
-{
-	Creature* res = new Creature();
-
-	//Generate a body schema
-	BodyPart* b = genCreatureRec(*this, res, root, pose, 1., 1.);
-	
-	//Check for failure
-	if(b == NULL)
-	{
-		delete res;
-		return NULL;
-	}
-	
-	//Attach root and done
-	res->root = b;
-	return res;
-}
-
 NxVec3 Node::closest_pt(const NxVec3& p)
 {
 	NxVec3 res = p;
@@ -456,5 +339,193 @@ void Edge::normalize(Genotype& gen)
 	else			reflect =  1;
 }
 
+
+
+
+
+//Generates a body part
+BodyPart* genCreatureRec(
+	Genotype&			genes,
+	Creature*			creature,
+	int 				n,
+	NxMat34				pose,
+	float				scale,
+	float				reflect)
+{
+	Node& node = genes.nodes[n];
+
+	//Generate the part at this node
+	BodyPart* res;
+	switch(node.shape)
+	{
+		case BODY_BOX:
+			res = new BodyPart(creature, node.color, pose, node.size * scale);
+		break;
+	
+		case BODY_SPHERE:
+			//TODO: Not yet implemented
+			assert(false);
+		break;
+	
+		case BODY_CAPSULE:
+			//TODO: Not yet implemented
+			assert(false);
+		break;
+		
+		default: assert(false);
+	}
+
+	//If fails, then return NULL
+	if(res->actor == NULL)
+	{
+		delete res;
+		return NULL;
+	}
+
+	//Add body part to body vector
+	creature->body.push_back(res);
+	
+	//Generate gates
+	vector<GateNode>& gates = genes.nodes[n].gates;
+	for(int i=0; i<(int)gates.size(); i++)
+	{
+		GateFactory* gf = getFactory(gates[i].name);	
+		res->controls.push_back(gf->createGate(gates[i].params));
+	}
+	
+	//For each edge:
+	for(int i=0; i<(int)genes.edges[n].size(); i++)
+	{
+		Edge& edge = genes.edges[n][i];
+		
+		//Check for mark
+		if(edge.marked)
+			continue;
+		edge.marked = true;
+		
+		//Compute translation from attachment points
+		NxVec3 s_point = edge.s_point * scale, 
+			   t_point = edge.rot.rot(edge.t_point * scale * edge.scale);
+		
+		//Transform frame
+		NxMat34 xform;
+		xform.t = t_point - s_point;
+		xform.M = NxMat33(edge.rot);
+		NxMat34 npose = xform * pose;
+		
+		//Generate new part
+		BodyPart* tmp = genCreatureRec(
+			genes, 
+			creature, 
+			edge.target, 
+			npose, 
+			scale * edge.scale,
+			reflect * edge.reflect);
+		
+		//If failed, then skip it
+		if(tmp == NULL)
+		{
+			edge.marked = false;
+			continue;
+		}
+
+		//Create joint and link parts
+		NxRevoluteJointDesc joint_desc;
+		joint_desc.setToDefault();
+		
+		joint_desc.actor[0] = 			res->actor;
+		joint_desc.localAnchor[0] =		edge.s_point * scale;
+		joint_desc.localAxis[0] =		edge.s_axis;
+		joint_desc.localNormal[0] = 	edge.s_norm;
+		
+		joint_desc.actor[1] = 			tmp->actor;
+		joint_desc.localAnchor[1] =		edge.t_point * scale * edge.scale;
+		joint_desc.localAxis[1] =		edge.t_axis;
+		joint_desc.localNormal[1] = 	edge.t_norm;
+		
+	    NxRevoluteJoint * joint = static_cast<NxRevoluteJoint*>(scene->createJoint(joint_desc));
+	    
+	    res->attachPart(tmp, joint, 10.f);	//TODO: Adjust strength calculation here
+
+		//Unmark used edge
+	 	edge.marked = false;
+	}
+	
+	//Rig up wires
+	for(int i=0; i<(int)gates.size(); i++)
+	{
+		for(int j=0; j<(int)gates[i].wires.size(); j++)
+		{
+			GateEdge ge = gates[i].wires[j];
+			
+			//Hard part: need to find target gate
+			BodyPart* container;
+			switch(ge.node_type)
+			{
+				case NODE_CURRENT:
+					container = res;
+				break;
+				case NODE_CHILD:
+					container = res->limbs[ge.node % res->limbs.size()];
+				break;
+				
+				default: assert(false);
+			}
+			
+			Gate* b;
+			switch(ge.gate_type)
+			{
+				case GATE_CONTROL:
+					b = container->controls[ge.gate % container->controls.size()];
+				break;
+				case GATE_SENSOR:
+					b = container->sensors[ge.gate % container->sensors.size()];
+				break;
+				case GATE_EFFECTOR:
+					b = container->effectors[ge.gate % container->effectors.size()];
+				break;
+				
+				default: assert(false);
+			}
+			
+			//Get default gate
+			Gate * a = res->controls[i];
+			if(ge.direction > 0)
+				swap(a, b);
+
+			//Add wire
+			Wire * wire = new Wire();
+			res->wires.push_back(wire);
+			
+			//Connect gates
+			a->outputs.push_back(wire);
+			b->inputs.push_back(wire);
+		}
+	}
+	
+	
+	return res;
+}
+
+
+//Constructs a creature from the genotype
+Creature* Genotype::createCreature(NxMat34 pose)
+{
+	Creature* res = new Creature();
+
+	//Generate a body schema
+	BodyPart* b = genCreatureRec(*this, res, root, pose, 1., 1.);
+	
+	//Check for failure
+	if(b == NULL)
+	{
+		delete res;
+		return NULL;
+	}
+	
+	//Attach root and done
+	res->root = b;
+	return res;
+}
 
 };

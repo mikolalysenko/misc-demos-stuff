@@ -14,17 +14,30 @@ namespace Game
 
 using namespace std;
 
+
+enum NodeType
+{
+	NODE_CURRENT,
+	NODE_CHILD,
+};
+
+enum GateType
+{
+	GATE_CONTROL,
+	GATE_SENSOR,
+	GATE_EFFECTOR,
+};
+
 //A GateEdge represents a wire in the creature's control system
 struct GateEdge
 {
-	int source_node, source_gate,
-		target_node, target_gate;
+	NodeType node_type;
+	GateType gate_type;
+	int node, gate, direction;
 		
 	//How this works --
 	//	the node descriptor tells which node to look for the gate in, and the gate
-	//	number tells which gate in that node to connect to.  The node number 0 means the actual
-	//	body node containing this gate and -1 means the parent node.  Otherwise, it indexes into edge - node.
-	//
+	//	number tells which gate in that node to connect to.  Sensors, effectors and logic are handled separately.
 		
 	void save(ostream& os) const;
 	static GateEdge load(istream& is);
