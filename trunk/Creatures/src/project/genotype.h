@@ -14,6 +14,12 @@ namespace Game
 
 using namespace std;
 
+//Reference types
+typedef int					node_ref;
+typedef pair<int,int>		edge_ref;
+typedef pair<int,int>		gate_ref;
+typedef pair<gate_ref,int>	wire_ref;
+
 
 enum NodeType
 {
@@ -31,6 +37,10 @@ enum GateType
 //A GateEdge represents a wire in the creature's control system
 struct GateEdge
 {
+	//Gate container stuff
+	int parent_gate, idx;
+	
+	//Pointer stuff
 	NodeType node_type;
 	GateType gate_type;
 	int node, gate, direction;
@@ -41,11 +51,17 @@ struct GateEdge
 		
 	void save(ostream& os) const;
 	static GateEdge load(istream& is);
+	
+	//Returns the reference to this wire
+	wire_ref	ref() const;
 };
 
 //A circuit node
 struct GateNode
 {
+	//Index/parent stuff
+	int container, idx;
+
 	//An internal node
 	vector<float>	params;
 	string			name;
@@ -56,11 +72,17 @@ struct GateNode
 	
 	//Connections to other gates
 	vector<GateEdge>	wires;
+
+	//Returns a handle
+	gate_ref	ref() const;
 };
 
 //A link between two phenotypes
 struct Edge
 {
+	//Index of edge
+	int idx;
+
 	//If true, edge is active
 	bool marked;
 
@@ -86,11 +108,17 @@ struct Edge
 	
 	//Normalizes the edge
 	void normalize(struct Genotype& gen);
+
+	//Returns a handle
+	edge_ref	ref() const;
 };
 
 //Generates some body part
 struct Node
 {
+	//Index of node
+	int idx;
+
 	//Color of this body part
 	NxVec3	color;
 	
@@ -110,15 +138,15 @@ struct Node
 	
 	//Control circuits associated to this particular body part.
 	vector<GateNode> gates;
+
+	//Returns a handle
+	node_ref	ref() const;
 };
-
-
 
 
 //A creature phenotype
 struct Genotype
 {
-	
 	//Phenotype graph
 	int						root;
 	vector<Node>			nodes;
@@ -133,7 +161,28 @@ struct Genotype
 		edges = t.edges;
 		return *this;
 	}
+	
+	//Graph modification/traversal stuff
+	node_ref	add_node();
+	edge_ref	add_edge(node_ref a, node_ref b);
+	gate_ref	add_gate(node_ref n);
+	wire_ref	add_wire(gate_ref a, gate_ref b);
+	
+	void		remove_node(node_ref n);
+	void		remove_edge(edge_ref e);
+	void		remove_gate(gate_ref g);
+	void		remove_wire(wire_ref w);
 
+	Node&		get_node(node_ref);
+	Edge&		get_edge(edge_ref);
+	Gate&		get_gate(gate_ref);
+	Wire&		get_wire(wire_ref);
+	
+	node_ref	random_node();
+	edge_ref	random_edge();
+	gate_ref	random_gate();
+	wire_ref	random_wire();
+	
 	//Save/load phenotypes from file
 	void save(ostream& os) const;
 	static Genotype load(istream& is);
@@ -141,11 +190,7 @@ struct Genotype
 	//Generates a creature from this graph
 	Creature* createCreature(NxMat34 pose);
 	Creature* createCreature() { NxMat34 tmp; tmp.id(); return createCreature(tmp); }
-
-	//Creates a mutated version of this phenotype
-	Genotype mutate() const;
 };
-
 
 };
 
