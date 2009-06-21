@@ -37,6 +37,19 @@ struct Gate
 	//Updates the logic gate
 	virtual void update() = 0;
 	
+	float read(int x)
+	{
+		if(x < 0 || x >= (int)inputs.size())
+			return 0.;
+		return inputs[x]->read();
+	}
+	
+	void write(int x, float v)
+	{
+		if(x >= 0 && x < (int)outputs.size())
+			outputs[x]->write(v);
+	}
+	
 	//Outputs/inputs to the gates
 	std::vector<Wire*>		inputs;
 	std::vector<Wire*>		outputs;
