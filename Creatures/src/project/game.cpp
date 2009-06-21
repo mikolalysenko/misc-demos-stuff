@@ -88,6 +88,8 @@ void init()
 		frame.t = NxVec3(0, 0, -50);
 		
 		critter = test.createCreature(frame);
+		
+		assert(critter != NULL);
 	}
 	catch(const char *err)
 	{

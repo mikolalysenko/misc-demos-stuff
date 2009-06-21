@@ -298,8 +298,9 @@ NxVec3 Node::closest_pt(const NxVec3& p)
 		break;
 		
 		case BODY_SPHERE:
-			//TODO: Implement sphere code
-			assert(false);
+			if(res.magnitude() <= 1e-6)
+				res = NxVec3(1,0,0);
+			res *= radius / res.magnitude();
 		break;
 		
 		case BODY_CAPSULE:
@@ -339,10 +340,6 @@ void Edge::normalize(Genotype& gen)
 	else			reflect =  1;
 }
 
-
-
-
-
 //Generates a body part
 BodyPart* genCreatureRec(
 	Genotype&			genes,
@@ -363,8 +360,7 @@ BodyPart* genCreatureRec(
 		break;
 	
 		case BODY_SPHERE:
-			//TODO: Not yet implemented
-			assert(false);
+			res = new BodyPart(creature, node.color, pose, node.radius * scale);
 		break;
 	
 		case BODY_CAPSULE:
