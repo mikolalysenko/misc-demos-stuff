@@ -132,9 +132,10 @@ void BodyPart::init_shape(NxShapeDesc* shape_desc, const NxMat34& pose)
 	
 	//Create the actor
 	actor = scene->createActor(actorDesc);
+	if(actor == NULL)
+		return;
+		
 	actor->userData = (void*)this;
-	
-	//TODO: Validate actor, check collisions
 }
 
 
@@ -154,6 +155,21 @@ BodyPart::BodyPart(
 	init_shape(&boxDesc, pose_);
 }
 
+//Sphere contructor
+BodyPart::BodyPart(
+	Creature*			owner_,
+	const NxVec3&		color_,
+	const NxMat34&		pose_,
+	float				radius_)
+			: color(color_), owner(owner_), shape(BODY_SPHERE), radius(radius_)
+{
+	//Create box shape descriptor
+	NxSphereShapeDesc sphereDesc;
+	sphereDesc.radius = radius;
+
+	//Initialize shape
+	init_shape(&sphereDesc, pose_);
+}
 
 
 //Body part destructor
