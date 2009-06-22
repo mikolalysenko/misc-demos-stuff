@@ -222,18 +222,14 @@ struct ConstantGateFactory : public GateFactory
 	//Normalizes the parameter vector
 	virtual void normalize(std::vector<float>& params)
 	{
-		params.resize(3);
-		
-		params[2] = max(params[2], 1.e-6f);
-		params[1] = max(min(params[1], params[2]), 0.f);
-		params[0] = max(min(params[0], params[2]), 0.f);
+		params.resize(1);
 	}
 	
 	//Creates a gate
 	virtual Gate* createGate(std::vector<float> params)
 	{
-		assert(params.size() == 3);
-		return new TimerGate(params[0], params[1], params[2]);
+		assert(params.size() == 1);
+		return new ConstantGate(params[0]);
 	}
 
 };
