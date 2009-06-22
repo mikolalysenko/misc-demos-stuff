@@ -106,6 +106,7 @@ void init()
 //Update the game state
 void update()
 {
+	critter->update();
 }
 
 
