@@ -272,6 +272,34 @@ Genotype Genotype::load(istream& is)
 }
 
 
+
+//Random node accessors
+Node& Genotype::random_node()
+{
+	return nodes[rand()%nodes.size()];
+}
+
+Edge& Genotype::random_edge()
+{
+	int n = rand() % (int)(nodes.size());
+	return edges[n][rand() % edges[n].size()];
+}
+
+GateNode& Genotype::random_gate()
+{
+	int n = rand() % (int)nodes.size();
+	return nodes[n].gates[rand() $ nodes[n].gates.size()];
+}
+
+GateEdge& Genotype::random_gate()
+{
+	int n = rand() % (int)nodes.size();
+	Gate& g = nodes[n].gates[rand() % (int)nodes[n].gates.size()];
+	return g.wires[rand() % (int)g.wires.size()];
+}
+
+
+
 NxVec3 Node::closest_pt(const NxVec3& p)
 {
 	NxVec3 res = p;
@@ -344,7 +372,7 @@ void Edge::normalize(Genotype& gen)
 BodyPart* genCreatureRec(
 	Genotype&			genes,
 	Creature*			creature,
-	int 				n,
+	int					n,
 	NxMat34				pose,
 	float				scale,
 	float				reflect)
@@ -382,7 +410,7 @@ BodyPart* genCreatureRec(
 	creature->body.push_back(res);
 	
 	//Generate gates
-	vector<GateNode>& gates = genes.nodes[n].gates;
+	vector<GateNode>& gates = node.gates;
 	for(int i=0; i<(int)gates.size(); i++)
 	{
 		GateFactory* gf = getFactory(gates[i].name);	
