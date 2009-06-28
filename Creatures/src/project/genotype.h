@@ -108,6 +108,9 @@ struct Node
 	//Gets the closest point to the surface of this body
 	NxVec3 closest_pt(const NxVec3& x);
 	
+	//Normalizes the genes
+	void normalize();
+	
 	//Control circuits associated to this particular body part.
 	vector<GateNode> gates;
 };
@@ -123,7 +126,7 @@ struct Genotype
 	
 	//Constructors
 	Genotype() {}
-	Genotype(const Genotype& t) : nodes(t.nodes), edges(t.edges) {}
+	Genotype(const Genotype& t) : root(t.root), nodes(t.nodes), edges(t.edges) {}
 	Genotype operator=(const Genotype& t)
 	{
 		nodes = t.nodes;
@@ -144,6 +147,8 @@ struct Genotype
 	//Generates a creature from this graph
 	Creature* createCreature(NxMat34 pose);
 	Creature* createCreature() { NxMat34 tmp; tmp.id(); return createCreature(tmp); }
+	
+	void normalize();
 };
 
 };

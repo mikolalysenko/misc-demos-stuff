@@ -3,6 +3,7 @@
 #include <string>
 #include <cassert>
 #include <utility>
+#include <ctype>
 #include <cmath>
 
 #include "common/sys_includes.h"
@@ -282,20 +283,31 @@ Node& Genotype::random_node()
 Edge& Genotype::random_edge()
 {
 	int n = rand() % (int)(nodes.size());
+
+	while(edges[n].size() == 0)
+		n = rand() % (int)(nodes.size());
 	return edges[n][rand() % edges[n].size()];
 }
 
 GateNode& Genotype::random_gate()
 {
 	int n = rand() % (int)nodes.size();
+	while(gates[n].size() == 0)
+		n = rand() % (int)(nodes.size());
 	return nodes[n].gates[rand() $ nodes[n].gates.size()];
 }
 
 GateEdge& Genotype::random_gate()
 {
 	int n = rand() % (int)nodes.size();
-	Gate& g = nodes[n].gates[rand() % (int)nodes[n].gates.size()];
-	return g.wires[rand() % (int)g.wires.size()];
+
+	while(gates[n].size() == 0)
+	{
+		n = rand() % (int)(nodes.size());
+		Gate& g = nodes[n].gates[rand() % (int)nodes[n].gates.size()];
+		if(g.wires.size() > 0)
+			return g.wires[rand() % (int)g.wires.size()];
+	}
 }
 
 
@@ -343,6 +355,44 @@ NxVec3 Node::closest_pt(const NxVec3& p)
 	return p;
 }
 
+void GateNode::normalize()
+{
+	for(int i=0; i<name.size(); i++)
+		name[i] = tolower(name[i]);
+
+	//Get factory
+	GateFactory* f = getFactory(name);
+	
+	if(f == NULL)
+	{
+		
+	}	
+	
+	
+
+}
+
+void Node::normalize()
+{
+	//Clamp color range to [0,1]
+	for(int i=0; i<3; i++)
+		colors[i] = max(min(colors[i], 1.f), 0.f);
+		
+	//Check bounds on shape value
+	if(shape != SHAPE_BOX ||
+		shape != SHAPE_SPHERE )
+	{
+		shape = SHAPE_BOX;
+	}
+
+	for(int i=0; i<3; i++)
+		size[i] = max(size[i], 0.25f);
+
+	radius = max(radius, 0.25f);
+	length = max(length, 0.2f);
+}
+
+
 //Normalizes an edge
 void Edge::normalize(Genotype& gen)
 {
@@ -366,6 +416,14 @@ void Edge::normalize(Genotype& gen)
 	//Fix up reflection
 	if(reflect < 0)	reflect = -1;
 	else			reflect =  1;
+}
+
+
+void Genotype::normalize()
+{
+	//Repair nodes
+	for(int i=0; i<nodes.size(); i++)
+		nodes[i].normalize(*this, i);
 }
 
 //Generates a body part
