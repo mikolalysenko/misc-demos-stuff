@@ -8,6 +8,7 @@
 #include "project/creature.h"
 #include "project/genotype.h"
 #include "project/mutation.h"
+#include "project/population.h"
 
 //STL stuff
 #include <iostream>
@@ -41,8 +42,10 @@ NxMat34 camera;
 int floor_height = -10; 
 
 
-Creature* critter;
-Genotype test;
+//Creature* critter;
+//Genotype test;
+
+Population*	population;
 
 
 //The scenario
@@ -88,6 +91,7 @@ void init()
 	critter->body.push_back(critter->root);
 */
 	
+	/*
 	try
 	{
 		ifstream fin("data/test2.dna");
@@ -96,7 +100,7 @@ void init()
 		
 		NxMat34 frame;
 		frame.id();
-		frame.t = NxVec3(0, 0, -50);
+		frame.t = NxVec3(0, 0, 0);
 		critter = test.createCreature(frame);
 		
 		assert(critter != NULL);
@@ -109,6 +113,15 @@ void init()
 	{
 		cerr << "Error loading creature: " << err << endl;	
 	}
+	*/
+	
+	FitnessTest* tester = new FitnessTest();
+	
+	population = new Population(
+		20,
+		10,
+		1000.,
+		tester);
 }
 
 
@@ -116,6 +129,7 @@ void init()
 //Update the game state
 void update()
 {
+/*
 	critter->update();
 	
 	lifetime -= 1.;
@@ -141,9 +155,12 @@ void update()
 
 		NxMat34 frame;
 		frame.id();
-		frame.t = NxVec3(0, 0, -50);
+		frame.t = NxVec3(0, 0, 0);
 		critter = test.createCreature(frame);
 	}
+*/
+
+	population->update();
 
 
 	NxMat34 trans;
@@ -186,8 +203,6 @@ void draw()
 	camera.getColumnMajor44(mat);
 	glMultMatrixf(mat);
 
-
-
 	//Draw floor
 	glBegin(GL_LINES);
 	glColor3f(1,1,1);
@@ -203,7 +218,8 @@ void draw()
 	glEnd();
 	
 	//Draw critter
-	critter->draw();
+	//critter->draw();
+	population->draw();
 }
 
 

@@ -129,7 +129,7 @@ struct Genotype
 	vector< vector<Edge> >	edges;
 	
 	//Constructors
-	Genotype() {}
+	Genotype() : root(0), nodes(0), edges(0) {}
 	Genotype(const Genotype& t) : root(t.root), nodes(t.nodes), edges(t.edges) {}
 	Genotype operator=(const Genotype& t)
 	{
@@ -147,6 +147,11 @@ struct Genotype
 	Creature* createCreature() { NxMat34 tmp; tmp.id(); return createCreature(tmp); }
 	
 	void normalize();
+	
+	bool operator<(const Genotype& other) const
+	{
+		return false;
+	}
 };
 
 };
