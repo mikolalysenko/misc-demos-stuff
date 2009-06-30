@@ -3,8 +3,8 @@
 #include <string>
 #include <cassert>
 #include <utility>
-#include <ctype>
 #include <cmath>
+#include <locale>
 
 #include "common/sys_includes.h"
 #include "common/physics.h"
@@ -221,7 +221,7 @@ Edge Edge::load(istream& is)
 void Genotype::save(ostream& os) const
 {
 	os	<< "GENOTYPE" << endl
-		<< nodes.size() << endl;
+		<< root << ' ' << nodes.size() << endl;
 	
 	for(int i=0; i<(int)nodes.size(); i++)
 	{
@@ -230,6 +230,8 @@ void Genotype::save(ostream& os) const
 		for(int j=0; j<(int)edges[i].size(); j++)
 			edges[i][j].save(os);
 	}
+	
+	cout << "here" << endl;
 }
 
 //Restore the phenotype
@@ -262,52 +264,10 @@ Genotype Genotype::load(istream& is)
 		}
 	}
 	
-	//Fix up edges
-	for(int i=0; i<(int)res.edges.size(); i++)
-	{
-		for(int j=0; j<(int)res.edges[i].size(); j++)
-			res.edges[i][j].normalize(res);
-	}
+	//Do clean up
+	res.normalize();
 	
 	return res;
-}
-
-
-
-//Random node accessors
-Node& Genotype::random_node()
-{
-	return nodes[rand()%nodes.size()];
-}
-
-Edge& Genotype::random_edge()
-{
-	int n = rand() % (int)(nodes.size());
-
-	while(edges[n].size() == 0)
-		n = rand() % (int)(nodes.size());
-	return edges[n][rand() % edges[n].size()];
-}
-
-GateNode& Genotype::random_gate()
-{
-	int n = rand() % (int)nodes.size();
-	while(gates[n].size() == 0)
-		n = rand() % (int)(nodes.size());
-	return nodes[n].gates[rand() $ nodes[n].gates.size()];
-}
-
-GateEdge& Genotype::random_gate()
-{
-	int n = rand() % (int)nodes.size();
-
-	while(gates[n].size() == 0)
-	{
-		n = rand() % (int)(nodes.size());
-		Gate& g = nodes[n].gates[rand() % (int)nodes[n].gates.size()];
-		if(g.wires.size() > 0)
-			return g.wires[rand() % (int)g.wires.size()];
-	}
 }
 
 
@@ -355,34 +315,90 @@ NxVec3 Node::closest_pt(const NxVec3& p)
 	return p;
 }
 
+void GateEdge::normalize(
+	Genotype& genes,
+	int n,
+	int g)
+{
+	//Normalize enum types
+	if(node_type != NODE_CURRENT ||
+		node_type != NODE_CHILD)
+	{
+		node_type = NODE_CURRENT;
+	}
+	
+	node = node % genes.nodes.size();
+	int t = node_type == NODE_CURRENT ? n : node;
+
+	//Validate gate type
+	if(gate_type != GATE_SENSOR ||
+		gate_type != GATE_EFFECTOR ||
+		gate_type != GATE_CONTROL ||
+		genes.edges[t].size() == 0)
+	{
+		gate_type = GATE_CONTROL;
+	}
+	
+	//Handle case where there might not be any control gates
+	if(gate_type == GATE_CONTROL &&
+		genes.nodes[t].gates.size() == 0)
+	{
+		node_type = NODE_CURRENT;
+		t = node = node % genes.nodes.size();
+	}
+
+	
+	switch(gate_type)
+	{
+		case GATE_SENSOR:
+			//TODO: Mod gate selector by number of sensors
+			gate %= genes.edges[t].size();
+		break;
+		
+		case GATE_EFFECTOR:
+			//TODO: Mod gate selector by number of effectors
+			gate %= genes.edges[t].size();
+		break;
+		
+		case GATE_CONTROL:
+			gate %= genes.nodes[t].gates.size();
+		break;
+		
+		default: assert(false);
+	}
+}
+
+
 void GateNode::normalize()
 {
-	for(int i=0; i<name.size(); i++)
+	//Force name to lower case
+	for(int i=0; i<(int)name.size(); i++)
 		name[i] = tolower(name[i]);
 
 	//Get factory
 	GateFactory* f = getFactory(name);
 	
+	//No factory, make up some random name
 	if(f == NULL)
 	{
-		
-	}	
-	
-	
+		name = randomGateName();
+		f = getFactory(name);
+	}
 
+	f->normalize(params);
 }
 
 void Node::normalize()
 {
 	//Clamp color range to [0,1]
 	for(int i=0; i<3; i++)
-		colors[i] = max(min(colors[i], 1.f), 0.f);
+		color[i] = max(min(color[i], 1.f), 0.f);
 		
 	//Check bounds on shape value
-	if(shape != SHAPE_BOX ||
-		shape != SHAPE_SPHERE )
+	if(shape != BODY_BOX ||
+		shape != BODY_SPHERE )	//TODO: Add capsule here when ready
 	{
-		shape = SHAPE_BOX;
+		shape = BODY_BOX;
 	}
 
 	for(int i=0; i<3; i++)
@@ -394,14 +410,16 @@ void Node::normalize()
 
 
 //Normalizes an edge
-void Edge::normalize(Genotype& gen)
+void Edge::normalize(Genotype& genes)
 {
+	marked = false;
+
 	//Fix up the quaternion
 	rot.normalize();
 
 	//Fix points to surface of bodies
-	s_point = gen.nodes[source].closest_pt(s_point);
-	t_point = gen.nodes[source].closest_pt(t_point);
+	s_point = genes.nodes[source].closest_pt(s_point);
+	t_point = genes.nodes[target].closest_pt(t_point);
 
 	//Renormalize edge frame
 	s_axis /= s_axis.magnitude();
@@ -416,14 +434,37 @@ void Edge::normalize(Genotype& gen)
 	//Fix up reflection
 	if(reflect < 0)	reflect = -1;
 	else			reflect =  1;
+	
+	//Fix up possible bounds issues
+	target %= genes.nodes.size();
 }
 
 
+//Normalizes all parameters to be within acceptable bounds.  This is necessary
+//because stuff might get fucked up due to mutation or dumb user input.
 void Genotype::normalize()
 {
-	//Repair nodes
-	for(int i=0; i<nodes.size(); i++)
-		nodes[i].normalize(*this, i);
+	for(int i=0; i<(int)nodes.size(); i++)
+	{
+		nodes[i].normalize();
+		for(int j=0; j<(int)nodes[i].gates.size(); j++)
+		{
+			nodes[i].gates[j].normalize();
+			
+			for(int k=0; k<(int)nodes[i].gates[j].wires.size(); k++)
+			{
+				nodes[i].gates[j].wires[k].normalize(*this, i, j);
+			}
+		}
+	}
+	
+	//Clean up edges
+	for(int i=0; i<(int)edges.size(); i++)
+	for(int j=0; j<(int)edges[i].size(); j++)
+	{
+		edges[i][j].source = i;
+		edges[i][j].normalize(*this);
+	}
 }
 
 //Generates a body part
@@ -493,9 +534,10 @@ BodyPart* genCreatureRec(
 		NxMat34 xform;
 		xform.t = t_point - s_point;
 		xform.M = NxMat33(edge.rot);
-		NxMat34 npose = xform * pose;
+		NxMat34 npose = pose * xform;
 		
 		//Generate new part
+		int c_partlen = creature->body.size();
 		BodyPart* tmp = genCreatureRec(
 			genes, 
 			creature, 
@@ -508,6 +550,7 @@ BodyPart* genCreatureRec(
 		if(tmp == NULL)
 		{
 			edge.marked = false;
+			creature->body.resize(c_partlen);
 			continue;
 		}
 
@@ -527,8 +570,19 @@ BodyPart* genCreatureRec(
 		
 	    NxRevoluteJoint * joint = static_cast<NxRevoluteJoint*>(scene->createJoint(joint_desc));
 	    
-	    res->attachPart(tmp, joint, 10.f);	//TODO: Adjust strength calculation here
-
+	    if(joint == NULL)
+	    {
+	    	cout << "Failed to create joint!" << endl;
+	    	delete tmp;
+	    	edge.marked = false;
+			creature->body.resize(c_partlen);
+	    	continue;
+	    }
+	   	else
+	   	{
+	    	res->attachPart(tmp, joint, 10.f);	//TODO: Adjust strength calculation here
+		}
+		
 		//Unmark used edge
 	 	edge.marked = false;
 	}

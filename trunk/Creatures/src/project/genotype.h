@@ -41,6 +41,8 @@ struct GateEdge
 		
 	void save(ostream& os) const;
 	static GateEdge load(istream& is);
+	
+	void normalize(struct Genotype& genes, int n, int g);
 };
 
 //A circuit node
@@ -56,6 +58,8 @@ struct GateNode
 	
 	//Connections to other gates
 	vector<GateEdge>	wires;
+	
+	void normalize();
 };
 
 //A link between two phenotypes
@@ -133,12 +137,6 @@ struct Genotype
 		edges = t.edges;
 		return *this;
 	}
-	
-	//Random node accessors
-	Node&		random_node();
-	Edge&		random_edge();
-	GateNode&	random_gate();
-	GateEdge&	random_gate();
 	
 	//Save/load phenotypes from file
 	void save(ostream& os) const;

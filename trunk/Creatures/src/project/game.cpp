@@ -7,6 +7,7 @@
 #include "project/game.h"
 #include "project/creature.h"
 #include "project/genotype.h"
+#include "project/mutation.h"
 
 //STL stuff
 #include <iostream>
@@ -29,16 +30,26 @@ float z_far			= 1200.0f;
 float delta_t		= 1. / 60.;
 
 
+float lifetime		= 200.;
+
+
+NxMat34 camera;
+
+
 
 //Scenario stuff
 int floor_height = -10; 
 
 
 Creature* critter;
+Genotype test;
+
 
 //The scenario
 void init_scenario()
 {
+	camera.id();
+
 	// Set default material (values taken from boxes demo, need to mess with this)
 	NxMaterial* defaultMaterial = scene->getMaterialFromIndex(0);
 	defaultMaterial->setRestitution(0.f);
@@ -79,14 +90,13 @@ void init()
 	
 	try
 	{
-		ifstream fin("data/test.dna");
-		Genotype test = Genotype::load(fin);
+		ifstream fin("data/test2.dna");
+		test = Genotype::load(fin);
 		test.save(cout);
 		
 		NxMat34 frame;
 		frame.id();
 		frame.t = NxVec3(0, 0, -50);
-		
 		critter = test.createCreature(frame);
 		
 		assert(critter != NULL);
@@ -107,12 +117,76 @@ void init()
 void update()
 {
 	critter->update();
+	
+	lifetime -= 1.;
+	
+	if(lifetime <= 0.)
+	{
+		cout << "Reset!" << endl;
+		lifetime = 300.;
+	
+		//Reset creature
+		delete critter;
+		
+		cout << "Creature deleted." << endl;
+
+		mutate(test);
+
+		cout << "Mutation complete; new genotype: " << endl;
+		
+		test.save(cout);
+
+
+		cout << "Building new creature" << endl;
+
+		NxMat34 frame;
+		frame.id();
+		frame.t = NxVec3(0, 0, -50);
+		critter = test.createCreature(frame);
+	}
+
+
+	NxMat34 trans;
+	trans.id();
+
+	if(key_down(SDLK_UP))
+	{
+		trans.t += NxVec3(0,0,0.25);
+	}
+	if(key_down(SDLK_DOWN))
+	{
+		trans.t += NxVec3(0,0,-0.25);
+	}
+	if(key_down(SDLK_RIGHT))
+	{
+		trans.t += NxVec3(-0.25,0.,0.);
+	}
+	if(key_down(SDLK_LEFT))
+	{
+		trans.t += NxVec3(0.25,0.,0.);
+	}
+	if(key_down('a'))
+	{
+		trans.t += NxVec3(0.,-.25,0.);
+	}
+	if(key_down('z'))
+	{
+		trans.t += NxVec3(0.,.25,0.);
+	}
+
+	
+	camera = camera * trans;
 }
 
 
 //Draw stuff
 void draw()
 {
+	float mat[16];
+	camera.getColumnMajor44(mat);
+	glMultMatrixf(mat);
+
+
 
 	//Draw floor
 	glBegin(GL_LINES);
