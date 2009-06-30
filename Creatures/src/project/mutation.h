@@ -1,5 +1,5 @@
-#ifndef MUTATION_H
-#define MUTATION_H
+#ifndef MUTATIONS_H
+#define MUTATIONS_H
 
 #include "project/genotype.h"
 
