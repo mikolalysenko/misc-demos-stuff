@@ -180,6 +180,7 @@ void create_wire(GateNode& g)
 
 void remove_node(Genotype& g)
 {
+	//TODO: Implement me!
 }
 
 void remove_edge(Genotype& g, int i)
@@ -295,6 +296,36 @@ Genotype graft(Genotype& a, Genotype& b)
 	
 	//TODO: Implement this
 	assert(false);
+	
+	return res;
+}
+
+//Generates a random creature
+Genotype randomCreature()
+{
+	Genotype res;
+	
+	res.root = 0;
+	for(int i=rand()%4; i<5; i++)
+	{
+		create_node(res);
+		
+		for(int j=rand()%3; j<3; j++)
+		{
+			Node& n = res.nodes[res.nodes.size()-1];
+			create_gate(n);
+			GateNode& g = n.gates[n.gates.size()-1];
+			for(int k=rand()%2; k<2; k++)
+				create_wire(g);
+		}
+		
+		for(int j=rand()%3; j<3; j++)
+			create_edge(res, res.nodes.size()-1);	
+	}
+	
+	res.normalize();
+	
+	res.save(cout);
 	
 	return res;
 }

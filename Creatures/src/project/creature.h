@@ -78,6 +78,9 @@ struct BodyPart
 	//Adds a limb to the object
 	void attachPart(BodyPart* part, NxRevoluteJoint* joint, float strength);
 	
+	//Returns the position of the creature
+	NxMat34 get_pose() { return actor->getGlobalPose(); }
+	
 	//Attributes common to all body parts
 	NxVec3						color;	//Color of the part
 	NxActor*					actor;	//Physical actor
@@ -117,6 +120,8 @@ struct Creature
 	
 	//Updates the creature
 	void update();
+	
+	NxMat34 get_pose() { return root->get_pose(); }
 	
 	//Body information for the creature
 	BodyPart*			root;
