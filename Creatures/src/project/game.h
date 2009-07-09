@@ -16,6 +16,8 @@ namespace Game
 	//Time quantum
 	extern float delta_t;
 	
+	extern int frame_skip;
+	
 
 	//Initialization function
 	void init();

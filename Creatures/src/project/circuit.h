@@ -66,6 +66,8 @@ struct GateFactory
 	//Generates a random vector of parameters
 	virtual std::vector<float> generateParams() = 0;
 	
+	virtual void perturbParams(std::vector<float>& params);
+	
 	//Normalizes the parameter vector
 	virtual void normalize(std::vector<float>& params) = 0;
 	

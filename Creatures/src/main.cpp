@@ -40,46 +40,53 @@ void main_loop()
 	
 	while(true)
 	{
-		SDL_Event event;
-		while(SDL_PollEvent(&event))
+		
+		for(int i=0; i<=frame_skip; i++)
 		{
-			switch(event.type)
+			SDL_Event event;
+			while(SDL_PollEvent(&event))
 			{
-				case SDL_VIDEORESIZE:
-					XRes = event.resize.w;
-					YRes = event.resize.h;
-				
-					window = SDL_SetVideoMode(XRes, YRes, 32, 
-						SDL_HWSURFACE | 
-						(fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE) |
-						SDL_OPENGL |
-						SDL_HWPALETTE);
-				break;
-				
-				case SDL_KEYDOWN:
-					if(event.key.keysym.sym == SDLK_ESCAPE)
+				switch(event.type)
+				{
+					case SDL_VIDEORESIZE:
+						XRes = event.resize.w;
+						YRes = event.resize.h;
+		
+						window = SDL_SetVideoMode(XRes, YRes, 32, 
+							SDL_HWSURFACE | 
+							(fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE) |
+							SDL_OPENGL |
+							SDL_HWPALETTE);
+					break;
+		
+					case SDL_KEYDOWN:
+						if(event.key.keysym.sym == SDLK_ESCAPE)
+							exit(0);
+					break;
+		
+					case SDL_QUIT:
 						exit(0);
-				break;
-				
-				case SDL_QUIT:
-					exit(0);
-				
-				default: break;
+		
+					default: break;
+				}
 			}
+			//Update input
+			key_update();
+
+		
+			if(i > 0)
+			{
+				scene->flushStream();
+				scene->fetchResults(NX_RIGID_BODY_FINISHED, true);
+			}
+			
+			Game::update();
+			scene->simulate(delta_t);
 		}
 		
 		
-		//Update input
-		key_update();
-		
-		//Update game
-		Game::update();
-		
-		// Start simulation (non blocking)
-		scene->simulate(delta_t);
-		
 		//Draw 3D component
-		glClearColor(0, 0, 0, 0);
+		glClearColor(0.235, 0.345, 0.891, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 	

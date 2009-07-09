@@ -12,12 +12,13 @@ using namespace std;
 
 extern void init_creatures();
 
+
 //A sensor is used to acquire input from the environment for the creature's control network
 struct JointSensor : Gate
 {
-	NxRevoluteJoint* joint;
+	NxJoint* joint;
 	
-	JointSensor(NxRevoluteJoint* joint_) : joint(joint_) {}
+	JointSensor(NxJoint* joint_) : joint(joint_) {}
 	virtual ~JointSensor() {}
 	virtual void update();
 };
@@ -25,10 +26,10 @@ struct JointSensor : Gate
 //An effector is a terminal node in a creature's neural network.  It controls the actuators/motors of the creature's limbs
 struct JointEffector : Gate
 {
-	NxRevoluteJoint* joint;
+	NxJoint* joint;
 	float max_force;
 	
-	JointEffector(NxRevoluteJoint* joint_, float max_f) : joint(joint_), max_force(max_f) {}
+	JointEffector(NxJoint* joint_, float max_f) : joint(joint_), max_force(max_f) {}
 	virtual ~JointEffector() {}
 	virtual void update();
 };
@@ -76,7 +77,7 @@ struct BodyPart
 	void update();
 	
 	//Adds a limb to the object
-	void attachPart(BodyPart* part, NxRevoluteJoint* joint, float strength);
+	void attachPart(BodyPart* part, NxJoint* joint, float strength);
 	
 	//Returns the position of the creature
 	NxMat34 get_pose() { return actor->getGlobalPose(); }
@@ -85,8 +86,9 @@ struct BodyPart
 	NxVec3						color;	//Color of the part
 	NxActor*					actor;	//Physical actor
 	vector<BodyPart*>			limbs;	//Limbs
-	vector<NxRevoluteJoint*>	joints;	//Joints
+	vector<NxJoint*>			joints;	//Joints
 	struct Creature*			owner;	//Creature which owns this part
+	NxCCDSkeleton*				skeleton;
 	
 	//Shape parameters
 	BodyPartType				shape;

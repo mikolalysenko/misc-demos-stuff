@@ -26,13 +26,15 @@ namespace Common
 		
 		//Create the scene
 		NxSceneDesc scene_desc;
+		//scene_desc.setToDefault();
 		scene_desc.gravity = NxVec3(0.f, -9.81f, 0.f);
 		scene = sdk->createScene(scene_desc);
 		
+		
 		//Just fill with set of numbers
 		actor_groups.resize(65535);
-		for(int i=1; i<65536; i++)
-			actor_groups[i] = i;
+		for(int i=0; i<actor_groups.size(); i++)
+			actor_groups[i] = i+1;
 	}
 	
 	NxActorGroup get_group()

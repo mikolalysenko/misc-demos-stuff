@@ -9,17 +9,17 @@
 namespace Game
 {
 
-const double MUTATION_RATE		= 0.02;
+const double MUTATION_RATE		= 0.01;
 
-const double NODE_CREATION_RATE	= 0.02;
-const double GATE_CREATION_RATE	= 0.02;
-const double EDGE_CREATION_RATE = 0.02;
-const double WIRE_CREATION_RATE = 0.02;
+const double NODE_CREATION_RATE	= 0.002;
+const double GATE_CREATION_RATE	= 0.002;
+const double EDGE_CREATION_RATE = 0.002;
+const double WIRE_CREATION_RATE = 0.002;
 
-const double NODE_KILL_RATE 	= 0.02;
-const double GATE_KILL_RATE 	= 0.02;
-const double EDGE_KILL_RATE 	= 0.02;
-const double WIRE_KILL_RATE 	= 0.02;
+const double NODE_KILL_RATE 	= 0.005;
+const double GATE_KILL_RATE 	= 0.005;
+const double EDGE_KILL_RATE 	= 0.005;
+const double WIRE_KILL_RATE 	= 0.005;
 
 const double ROOT_RELOC_RATE	= 0.001;
 
@@ -56,8 +56,10 @@ void perturb_node(Node& n)
 		n.length += nrand();
 }
 
-void perturb_edge(Edge& e)
+void perturb_edge(Genotype& g, int s, int x)
 {
+	Edge& e = g.edges[s][x];
+
 	if(drand48() < MUTATION_RATE)
 	{
 		e.rot *= rand_quat();
@@ -83,8 +85,16 @@ void perturb_edge(Edge& e)
 		e.t_norm += rand_vec();
 	if(drand48() < MUTATION_RATE)
 		e.t_point += rand_vec() * 5;
-	
-	//TODO: Maybe switch topology
+		
+	if(drand48() < MUTATION_RATE)
+		e.target = rand() % g.nodes.size();
+		
+	if(drand48() < MUTATION_RATE)
+	{
+		e.source = rand() % g.nodes.size();
+		g.edges[e.source].push_back(e);
+		g.remove_edge(s, x);
+	}
 }
 
 
@@ -100,30 +110,40 @@ void perturb_gate(GateNode& g)
 	else for(int i=0; i<(int)g.params.size(); i++)
 	{
 		if(drand48() < MUTATION_RATE)
-			g.params[i] += nrand();
+			g.params[i] += nrand() * 20.;
 	}
 }
 
 void perturb_wire(GateEdge& w)
 {
-	//TODO: Maybe switch target here?
+	if(drand48() < MUTATION_RATE)
+		w.direction *= -1;
+	if(drand48() < MUTATION_RATE)
+		w.node = rand();
+	if(drand48() < MUTATION_RATE)
+		w.gate = rand();
+	if(drand48() < MUTATION_RATE)
+		w.gate_type = (GateType)(rand() % 3);
+	if(drand48() < MUTATION_RATE)
+		w.node_type = (NodeType)(rand() % 2);
 }
 
 void create_node(Genotype& genes)
 {
 	Node tmp;
-	tmp.color = NxVec3(pow(drand48()*2.,4.)/16.,pow(drand48()*2.,4.)/16.,pow(drand48()*2,4.)/16.);
+	tmp.color = NxVec3(pow(drand48()*2.,4.5)/16.,pow(drand48()*2.,4.5)/16.,pow(drand48()*2,4.5)/16.);
 	
-	tmp.shape = (BodyPartType)(rand() % 2); //TODO: When capsules are implemented make this a 3
+	tmp.shape = (BodyPartType)(rand() % 2);
 	
 	//Body part specific information
-	tmp.size = rand_vec(2) * 10.;
+	tmp.size = rand_vec(5) * 5. + NxVec3(5,5,5);
 	tmp.radius = nrand(2) * 10.;
 	tmp.length = nrand(2) * 10.;
 	
 	genes.nodes.push_back(tmp);
 	
 	vector<Edge> tmp2;
+	tmp2.resize(0);
 	genes.edges.push_back(tmp2);
 }
 
@@ -140,16 +160,46 @@ void create_edge(Genotype& genes, int x)
 	
 	//Frame of reference for new body part
 	tmp.rot = rand_quat(1);
-	tmp.scale = nrand();
+	tmp.scale = nrand() + 1.;
 	tmp.reflect = (rand() & 2) ? 1 : -1;
 	
 	//Joint information (must be a hinge)
+	NxVec3 s_size = genes.nodes[tmp.source].size;
+	
+	tmp.s_axis = NxVec3(0,0,0);
+	tmp.s_axis[rand()%3]=(rand()%2?1.f:-1.f);
 	tmp.s_axis = rand_vec();
 	tmp.s_norm = rand_vec();
-	tmp.s_point = rand_vec(3)*4.;
-	tmp.t_axis = rand_vec();
+	tmp.s_point = NxVec3(nrand(3)*s_size.x,
+				nrand(3)*s_size.y,
+				nrand(3)*s_size.z);
+	for(int i=0; i<3; i++)
+	{
+		if(tmp.s_axis[i] < 0)
+			tmp.s_point[i] = -s_size[i];
+		else
+			tmp.s_point[i] = s_size[i];
+	}
+	tmp.s_axis += rand_vec() * 0.2;
+
+
+	NxVec3 t_size = genes.nodes[tmp.target].size;
+	tmp.t_axis = NxVec3(0,0,0);
+	tmp.t_axis[rand()%3]=(rand()%2?1.f:-1.f);
 	tmp.t_norm = rand_vec();
-	tmp.t_point = rand_vec(3)*4.;
+	tmp.t_point = NxVec3(nrand(3)*t_size.x,
+				nrand(3)*t_size.y,
+				nrand(3)*t_size.z);
+	for(int i=0; i<3; i++)
+	{
+		if(tmp.t_axis[i] < 0)
+			tmp.t_point[i] = -t_size[i];
+		else
+			tmp.t_point[i] = t_size[i];
+	}
+	tmp.t_axis += rand_vec() * 0.2;
+				
+				
 	
 	genes.edges[x].push_back(tmp);
 }
@@ -180,19 +230,34 @@ void create_wire(GateNode& g)
 
 void remove_node(Genotype& g)
 {
-	//TODO: Implement me!
+	int N = g.nodes.size();
+	if(g.nodes.size() <= 1)
+		return;
+	g.remove_node(rand() % N);
 }
 
 void remove_edge(Genotype& g, int i)
 {
+	int N = g.edges[i].size();
+	if(N == 0)
+		return;
+	g.remove_edge(i, rand() % N);
 }
 
-void remove_gate(Node& n)
+void remove_gate(Genotype& g, int n)
 {
+	int N = g.nodes[n].gates.size();
+	if(N == 0)
+		return;
+	g.remove_gate(n, rand() % N);
 }
 
-void remove_wire(GateNode& g)
+void remove_wire(Genotype& g, int n, int gt)
 {
+	int N = g.nodes[n].gates[gt].wires.size();
+	if(N == 0)
+		return;
+	g.remove_wire(n, gt, rand() % N);
 }
 
 void mutate(Genotype& genes)
@@ -235,14 +300,14 @@ void mutate(Genotype& genes)
 			
 			while(drand48() < WIRE_KILL_RATE)
 			{
-				remove_wire(g);
+				remove_wire(genes, i, j);
 			}
 		}
 		
 		//Randomly kill off gates
 		while(drand48() < GATE_KILL_RATE)
 		{
-			remove_gate(n);
+			remove_gate(genes, i);
 		}
 		
 
@@ -251,12 +316,11 @@ void mutate(Genotype& genes)
 		{
 			create_edge(genes, i);
 		}
-	
+
 		//Perturb edges
 		for(int j=0; j<(int)genes.edges[i].size(); j++)
 		{
-			Edge& e = genes.edges[i][j];
-			perturb_edge(e);
+			perturb_edge(genes, i, j);
 		}
 		
 		while(drand48() < EDGE_KILL_RATE)
@@ -301,31 +365,30 @@ Genotype graft(Genotype& a, Genotype& b)
 }
 
 //Generates a random creature
-Genotype randomCreature()
+Genotype randomCreature(int N, int E, int G, int W)
 {
 	Genotype res;
 	
-	res.root = 0;
-	for(int i=rand()%4; i<5; i++)
+	for(int i=rand()%(N-1); i<N; i++)
 	{
 		create_node(res);
 		
-		for(int j=rand()%3; j<3; j++)
+		for(int j=rand()%G; j<G; j++)
 		{
 			Node& n = res.nodes[res.nodes.size()-1];
 			create_gate(n);
 			GateNode& g = n.gates[n.gates.size()-1];
-			for(int k=rand()%2; k<2; k++)
+			for(int k=rand()%W; k<W; k++)
 				create_wire(g);
 		}
 		
-		for(int j=rand()%3; j<3; j++)
+		for(int j=rand()%E; j<E-1; j++)
 			create_edge(res, res.nodes.size()-1);	
 	}
 	
-	res.normalize();
+	res.root = rand() % res.nodes.size();
 	
-	res.save(cout);
+	res.normalize();
 	
 	return res;
 }
