@@ -14,29 +14,39 @@ namespace Game
 struct FitnessTest
 {
 	Creature* creature;
+	NxVec3 base_position;
+	
+	double current_time, round_time, rest_time, fitness;
+	
+	double max_height;
+	
+	
+	FitnessTest() {}
+	FitnessTest(
+		float round_time_,
+		float rest_time_) : 
+			creature(NULL),
+			round_time(round_time_),
+			rest_time(rest_time_) {}
 
-	virtual void start_test(Genotype* genes);
-	virtual void stop_test();	
-	virtual void update();
+	virtual void start_test(Genotype& genes);
+	virtual bool update();
 	virtual void draw();
-	virtual float get_fitness();
 };
 
 //A population of creatures
 struct Population
 {
-	vector< pair<float,Genotype*> >	species;
-	vector< pair<float,Genotype*> >	best_species;
+	vector< pair<float,Genotype> >	species;
+	vector< pair<float,Genotype> >	best_species;
 	
 	FitnessTest*	tester;
-	float 			max_round_time;
 	
 	//Constructors
 	Population() {}
 	Population(
 		int num_creatures,
 		int num_high_scores,
-		float round_time,
 		FitnessTest* test);
 	
 	//Updates the population
@@ -47,7 +57,6 @@ struct Population
 	static void load(istream& is);
 	
 private:
-	float	round_time;
 	int 	current_test;
 
 	///Generates a new creature

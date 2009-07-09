@@ -230,8 +230,6 @@ void Genotype::save(ostream& os) const
 		for(int j=0; j<(int)edges[i].size(); j++)
 			edges[i][j].save(os);
 	}
-	
-	cout << "here" << endl;
 }
 
 //Restore the phenotype
@@ -283,14 +281,14 @@ NxVec3 Node::closest_pt(const NxVec3& p)
 				res[i] = max(min(p[i], size[i]), -size[i]);
 			for(int i=0; i<3; i++)
 			{
-				if(abs(res[i]) >= size[i] &&
-					abs(res[i]) > size[(i+1)%3] &&
-					abs(res[i]) > size[(i+2)%3])
+				if(abs(res[i]) > abs(res[(i+1)%3]) &&
+					abs(res[i]) > abs(res[(i+2)%3]))
 				{
 					if(res[i] < 0)
 						res[i] = -size[i];
 					else
 						res[i] = size[i];
+					break;
 				}
 			}
 			
@@ -321,7 +319,7 @@ void GateEdge::normalize(
 	int g)
 {
 	//Normalize enum types
-	if(node_type != NODE_CURRENT ||
+	if(node_type != NODE_CURRENT &&
 		node_type != NODE_CHILD)
 	{
 		node_type = NODE_CURRENT;
@@ -331,9 +329,9 @@ void GateEdge::normalize(
 	int t = node_type == NODE_CURRENT ? n : node;
 
 	//Validate gate type
-	if(gate_type != GATE_SENSOR ||
-		gate_type != GATE_EFFECTOR ||
-		gate_type != GATE_CONTROL ||
+	if(!(gate_type == GATE_SENSOR ||
+		gate_type == GATE_EFFECTOR ||
+		gate_type == GATE_CONTROL) ||
 		genes.edges[t].size() == 0)
 	{
 		gate_type = GATE_CONTROL;
@@ -352,16 +350,21 @@ void GateEdge::normalize(
 	{
 		case GATE_SENSOR:
 			//TODO: Mod gate selector by number of sensors
-			gate %= genes.edges[t].size();
+			//gate %= genes.edges[t].size();
+			gate = 0;
 		break;
 		
 		case GATE_EFFECTOR:
 			//TODO: Mod gate selector by number of effectors
-			gate %= genes.edges[t].size();
+			//gate %= genes.edges[t].size();
+			gate = 0;
 		break;
 		
 		case GATE_CONTROL:
-			gate %= genes.nodes[t].gates.size();
+			if(genes.nodes[t].gates.size() > 0)
+				gate %= genes.nodes[t].gates.size();
+			else
+				gate = 0;
 		break;
 		
 		default: assert(false);
@@ -394,18 +397,15 @@ void Node::normalize()
 	for(int i=0; i<3; i++)
 		color[i] = max(min(color[i], 1.f), 0.f);
 		
-	//Check bounds on shape value
-	if(shape != BODY_BOX ||
-		shape != BODY_SPHERE )	//TODO: Add capsule here when ready
-	{
-		shape = BODY_BOX;
-	}
+	//Kill shape
+	shape = BODY_BOX;
+
 
 	for(int i=0; i<3; i++)
-		size[i] = max(size[i], 0.25f);
+		size[i] = max(size[i], 1.f);
 
-	radius = max(radius, 0.25f);
-	length = max(length, 0.2f);
+	radius = max(radius, 1.f);
+	length = max(length, 1.f);
 }
 
 
@@ -467,6 +467,112 @@ void Genotype::normalize()
 	}
 }
 
+//Graph modification stuff
+void Genotype::remove_node(int n)
+{
+	//Remove object
+	int T = nodes.size() - 1;
+	edges[n] = edges[T];
+	nodes[n] = nodes[T];
+	edges.resize(T);
+	nodes.resize(T);
+	
+	if(root == T)
+		root = n;
+	
+	//Update edges	
+	for(int i=0; i<(int)edges.size(); i++)
+	for(int j=0; j<(int)edges[i].size(); j++)
+	{
+		if(edges[i][j].target == n)
+		{
+			remove_edge(i, j);
+			j--;
+		}
+		else if(edges[i][j].target == T)
+		{
+			edges[i][j].target = n;
+		}
+	}
+}
+
+void Genotype::remove_edge(int s, int x)
+{
+	int T = edges[s].size() - 1;
+	
+	edges[s][x] = edges[s][T];
+	edges[s].resize(T);
+	
+	//Need to update gates somehow
+	for(int i=0; i<(int)nodes[s].gates.size(); i++)
+	{
+		GateNode& g = nodes[s].gates[i];
+		for(int j=0; j<(int)g.wires.size(); j++)
+		{
+			GateEdge w = g.wires[j];
+			if(w.node_type != NODE_CHILD || edges[s].size() == 0)
+				continue;
+				
+				
+			if(w.node % (int)edges[s].size() == x)
+			{
+				remove_wire(s, i, j);
+				j--;
+			}
+			else if(w.node % (int)edges[s].size() == T)
+			{
+				w.node = x;
+			}
+		}
+	}
+}
+
+void Genotype::remove_gate(int n, int g)
+{
+	Node& N = nodes[n];
+
+	int T = N.gates.size()-1;
+	N.gates[g] = N.gates[T];
+	N.gates.resize(T);
+	
+	for(int s=0; s<(int)nodes.size(); s++)
+	{
+		Node& nn = nodes[s];
+		for(int i=0; i<(int)nn.gates.size(); i++)
+		{
+			GateNode& gg = nn.gates[i];
+			for(int j=0; j<(int)gg.wires.size(); j++)
+			{
+				GateEdge& w = gg.wires[j];
+				if(	w.node_type == NODE_CURRENT ||
+					w.gate_type != GATE_CONTROL ||
+					edges[s].size() == 0 ||
+					edges[s][w.node % edges[s].size()].target != n )
+					continue;
+				
+				if(w.gate == g)
+				{
+					remove_wire(s, i, j);
+					j--;
+				}
+				else if(w.gate == T)
+				{
+					w.gate = T;
+				}
+			}
+		}
+	}
+}
+
+void Genotype::remove_wire(int n, int g, int w)
+{
+	GateNode& gg = nodes[n].gates[g];
+	gg.wires[w] = gg.wires[gg.wires.size()-1];
+	gg.wires.resize(gg.wires.size()-1);
+}
+
+
+
 //Generates a body part
 BodyPart* genCreatureRec(
 	Genotype&			genes,
@@ -527,14 +633,16 @@ BodyPart* genCreatureRec(
 		edge.marked = true;
 		
 		//Compute translation from attachment points
-		NxVec3 s_point = edge.s_point * scale, 
-			   t_point = edge.rot.rot(edge.t_point * scale * edge.scale);
+		NxVec3 s_point = edge.s_point * (scale + 0.02), 
+			   t_point = edge.t_point * (scale * edge.scale + 0.02);
 		
 		//Transform frame
-		NxMat34 xform;
-		xform.t = t_point - s_point;
-		xform.M = NxMat33(edge.rot);
-		NxMat34 npose = pose * xform;
+		NxMat33 rot = pose.M * NxMat33(edge.rot), rotInv;
+		rot.getInverse(rotInv);
+		
+		NxMat34 npose;
+		npose.M = rot;
+		npose.t = pose * s_point - rot * t_point;;
 		
 		//Generate new part
 		int c_partlen = creature->body.size();
@@ -550,32 +658,53 @@ BodyPart* genCreatureRec(
 		if(tmp == NULL)
 		{
 			edge.marked = false;
+			
+			for(int i=c_partlen; i<(int)creature->body.size(); i++)
+				delete creature->body[i];			
 			creature->body.resize(c_partlen);
 			continue;
 		}
 
 		//Create joint and link parts
-		NxRevoluteJointDesc joint_desc;
+		NxD6JointDesc joint_desc;
 		joint_desc.setToDefault();
 		
+		joint_desc.maxForce =			1e6;
+		joint_desc.maxTorque =			1e6;
+		
+		joint_desc.xMotion = joint_desc.yMotion = joint_desc.zMotion = NX_D6JOINT_MOTION_LOCKED;
+		
+		joint_desc.swing1Motion = joint_desc.swing2Motion = joint_desc.twistMotion = NX_D6JOINT_MOTION_FREE;
+		
+		NxJointDriveDesc drive_limits;
+		drive_limits.damping = 0.05;
+		drive_limits.spring = 0.05;
+		drive_limits.forceLimit = 400.;
+		drive_limits.driveType = NX_D6JOINT_DRIVE_VELOCITY;
+		joint_desc.slerpDrive = drive_limits;
+		
 		joint_desc.actor[0] = 			res->actor;
-		joint_desc.localAnchor[0] =		edge.s_point * scale;
+		joint_desc.localAnchor[0] =		edge.s_point * (scale + 0.02);
 		joint_desc.localAxis[0] =		edge.s_axis;
 		joint_desc.localNormal[0] = 	edge.s_norm;
 		
 		joint_desc.actor[1] = 			tmp->actor;
-		joint_desc.localAnchor[1] =		edge.t_point * scale * edge.scale;
+		joint_desc.localAnchor[1] =		edge.t_point * (scale * edge.scale + 0.02);
 		joint_desc.localAxis[1] =		edge.t_axis;
 		joint_desc.localNormal[1] = 	edge.t_norm;
 		
-	    NxRevoluteJoint * joint = static_cast<NxRevoluteJoint*>(scene->createJoint(joint_desc));
+	    NxJoint * joint = scene->createJoint(joint_desc);
 	    
 	    if(joint == NULL)
 	    {
-	    	cout << "Failed to create joint!" << endl;
+	    	//cout << "Failed to create joint!" << endl;
 	    	delete tmp;
 	    	edge.marked = false;
+	    	
+			for(int i=c_partlen+1; i<(int)creature->body.size(); i++)
+				delete creature->body[i];			
 			creature->body.resize(c_partlen);
+			
 	    	continue;
 	    }
 	   	else
@@ -602,7 +731,11 @@ BodyPart* genCreatureRec(
 					container = res;
 				break;
 				case NODE_CHILD:
-					container = res->limbs[ge.node % res->limbs.size()];
+				
+					if(res->limbs.size() > 0)
+						container = res->limbs[ge.node % res->limbs.size()];
+					else
+						container = res;
 				break;
 				
 				default: assert(false);
@@ -611,14 +744,19 @@ BodyPart* genCreatureRec(
 			Gate* b;
 			switch(ge.gate_type)
 			{
+				case GATE_SENSOR:
+				if(container->sensors.size() > 0)
+				{	b = container->sensors[ge.gate % container->sensors.size()];
+					break;
+				}
+				case GATE_EFFECTOR:
+				if(container->effectors.size() > 0)
+				{	b = container->effectors[ge.gate % container->effectors.size()];
+					break;
+				}
+
 				case GATE_CONTROL:
 					b = container->controls[ge.gate % container->controls.size()];
-				break;
-				case GATE_SENSOR:
-					b = container->sensors[ge.gate % container->sensors.size()];
-				break;
-				case GATE_EFFECTOR:
-					b = container->effectors[ge.gate % container->effectors.size()];
 				break;
 				
 				default: assert(false);

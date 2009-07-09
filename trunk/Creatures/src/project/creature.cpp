@@ -99,32 +99,115 @@ void JointSensor::update()
 	qa.invert();
 	qb *= qa;
 	
-	write(0, qb.getAngle());
-	write(1, joint->getVelocity());
+	write(0, qb.x);
+	write(1, qb.y);
+	write(2, qb.z);
+	write(3, qb.w);
 }
 
 //A joint effector drives the creature's motion
 void JointEffector::update()
 {
-	NxMotorDesc desc;
-	
-	desc.freeSpin = (read(1) < 1.);
-	desc.maxForce = max_force;
-	desc.velTarget = read(0);
-	
-	joint->setMotor(desc);
+	static_cast<NxD6Joint*>(joint)->setDriveAngularVelocity(NxVec3(read(0), read(1), read(2)));
 }
 
-//Initialize the body part
-void BodyPart::init_shape(NxShapeDesc* shape_desc, const NxMat34& pose)
+//Copied from SDK
+static NxCCDSkeleton* CreateCCDSkeleton (NxVec3 size)
 {
+	NxU32 triangles[3 * 12] = { 
+		0,1,3,
+		0,3,2,
+		3,7,6,
+		3,6,2,
+		1,5,7,
+		1,7,3,
+		4,6,7,
+		4,7,5,
+		1,0,4,
+		5,1,4,
+		4,0,2,
+		4,2,6
+	};
+
+	NxVec3 points[8];
+
+	//static mesh
+	points[0].set( size.x, -size.y, -size.z);
+	points[1].set( size.x, -size.y,  size.z);
+	points[2].set( size.x,  size.y, -size.z);
+	points[3].set( size.x,  size.y,  size.z);
+
+	points[4].set(-size.x, -size.y, -size.z);
+	points[5].set(-size.x, -size.y,  size.z);
+	points[6].set(-size.x,  size.y, -size.z);
+	points[7].set(-size.x,  size.y,  size.z);
+
+	NxSimpleTriangleMesh stm;
+	stm.numVertices = 8;
+	stm.numTriangles = 6*2;
+	stm.pointStrideBytes = sizeof(NxVec3);
+	stm.triangleStrideBytes = sizeof(NxU32)*3;
+
+	stm.points = points;
+	stm.triangles = triangles;
+	stm.flags |= NX_MF_FLIPNORMALS;
+	return sdk->createCCDSkeleton(stm);
+}
+
+
+//Initialize the body part
+void BodyPart::init_shape(NxShapeDesc* foo, const NxMat34& tpose)
+{
+	actor = NULL;
+	skeleton = NULL;
+
+	//Check for collision
+	
+	bool fits = false;
+	NxMat34 pose = tpose;
+
+	NxMat33 ID;
+	ID.id();
+	NxBox box(NxVec3(0,0,0), size*.9, ID);
+	box.rotate(pose, box);
+
+	if(scene->checkOverlapOBB(box))
+	{
+		fits = true;
+	}
+	else for(int i=0; i<30; i++)
+	{
+		NxMat34 tmp;
+		tmp.t = NxVec3(size.x * (drand48()-.5) / 10., size.y*(drand48()-.5)/10., size.z*(drand48()-.5)/10.);
+		NxQuat r;
+		
+		NxVec3 v = NxVec3(drand48()-.5,drand48()-.5,drand48()-.5);
+		v.normalize();
+		r.fromAngleAxis(30. * (drand48() - .5), v);
+		tmp.M.fromQuat(r);
+		
+		pose = tpose * tmp;
+		
+		if(scene->checkOverlapOBB(box))
+		{
+			fits = true;
+			break;
+		}
+	}
+	
+	
+	NxBoxShapeDesc shape_desc;
+	shape_desc.dimensions = size;
+	shape_desc.ccdSkeleton = CreateCCDSkeleton(size*0.8f);
+	shape_desc.shapeFlags |= NX_SF_DYNAMIC_DYNAMIC_CCD; //Activate dynamic-dynamic CCD for 
+
 	// Create body
 	NxBodyDesc bodyDesc;
 	bodyDesc.angularDamping	= 0.5f;
 
 	//Set up parameters
 	NxActorDesc actorDesc;
-	actorDesc.shapes.pushBack(shape_desc);
+	actorDesc.shapes.pushBack(&shape_desc);
 	actorDesc.body			= &bodyDesc;
 	actorDesc.density		= 10.0f;
 	actorDesc.globalPose	= pose;
@@ -136,6 +219,8 @@ void BodyPart::init_shape(NxShapeDesc* shape_desc, const NxMat34& pose)
 		return;
 		
 	actor->userData = (void*)this;
+	
+	//TODO: Attach touch sensor
 }
 
 
@@ -178,10 +263,22 @@ BodyPart::~BodyPart()
 	//Need to clean up joints first
 	for(int i=0; i<(int)joints.size(); i++)
 		scene->releaseJoint(*joints[i]);
+		
+	for(int i=0; i<(int)controls.size(); i++)
+		delete controls[i];
+	for(int i=0; i<(int)effectors.size(); i++)
+		delete effectors[i];
+	for(int i=0; i<(int)sensors.size(); i++)
+		delete sensors[i];
+	for(int i=0; i<(int)wires.size(); i++)
+		delete wires[i];
 
 	//Then release actor
 	if(actor != NULL)
 		scene->releaseActor(*actor);
+
+	if(skeleton != NULL)
+		sdk->releaseCCDSkeleton(*skeleton);
 }
 
 //Draws a body part
@@ -229,7 +326,7 @@ void BodyPart::update()
 		effectors[i]->update();
 }
 
-void BodyPart::attachPart(BodyPart* part, NxRevoluteJoint* joint, float strength)
+void BodyPart::attachPart(BodyPart* part, NxJoint* joint, float strength)
 {
 	limbs.push_back(part);
 	joints.push_back(joint);

@@ -14,6 +14,8 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cstdlib>
+#include <time.h>
 
 using namespace std;
 using namespace Common;
@@ -28,11 +30,12 @@ bool fullscreen		= false;
 float fov			= 45.0f;
 float z_near		= 0.5f;
 float z_far			= 1200.0f;
-float delta_t		= 1. / 60.;
+float delta_t		= 0.01;
 
+bool paused			= false;
 
-float lifetime		= 200.;
-
+//Number of extra frames to run
+int frame_skip		= 0;
 
 NxMat34 camera;
 
@@ -52,6 +55,9 @@ Population*	population;
 void init_scenario()
 {
 	camera.id();
+	
+	
+	srand(time(NULL));
 
 	// Set default material (values taken from boxes demo, need to mess with this)
 	NxMaterial* defaultMaterial = scene->getMaterialFromIndex(0);
@@ -63,7 +69,7 @@ void init_scenario()
 	NxPlaneShapeDesc planeDesc;
 	planeDesc.normal = NxVec3(0, 1, 0);
 	planeDesc.d = floor_height;
-	
+
 	NxActorDesc actorDesc;
 	actorDesc.shapes.pushBack(&planeDesc);
 	scene->createActor(actorDesc);
@@ -115,12 +121,11 @@ void init()
 	}
 	*/
 	
-	FitnessTest* tester = new FitnessTest();
+	FitnessTest* tester = new FitnessTest(20000., 5000.);
 	
 	population = new Population(
-		20,
+		100,
 		10,
-		1000.,
 		tester);
 }
 
@@ -190,6 +195,24 @@ void update()
 	{
 		trans.t += NxVec3(0.,.25,0.);
 	}
+	
+	
+	if(key_press('-'))
+	{
+		frame_skip -= 5;
+		cout << "frameskip = " << frame_skip << endl;
+	}
+	if(key_press('='))
+	{
+		frame_skip += 5;
+		cout << "frameskip = " << frame_skip << endl;
+	}
+	frame_skip = max(frame_skip, 0);
+	
+	if(key_down('x'))
+	{
+		camera = population->tester->creature->get_pose();
+	}
 
 	
 	camera = camera * trans;
@@ -199,20 +222,42 @@ void update()
 //Draw stuff
 void draw()
 {
+/*
 	float mat[16];
 	camera.getColumnMajor44(mat);
 	glMultMatrixf(mat);
+*/
+
+	static float theta = 0.;
+	static float radius = 250.;
+	
+	if(population->tester->creature != NULL)
+	{
+	
+	NxMat34 creature_pose = population->tester->creature->get_pose();
+	NxVec3 loc = creature_pose.t;
+	
+	gluLookAt(
+		loc.x + cos(theta) * radius, loc.y + radius/3, loc.z + sin(theta) * radius,
+		loc.x, loc.y, loc.z,
+		0, 1, 0);
+		
+	theta += 0.001;
+	if(theta > M_PI*2)
+		theta -= M_PI*2;
+	
+	}
 
 	//Draw floor
 	glBegin(GL_LINES);
 	glColor3f(1,1,1);
-	for(int i=-50; i<=50; i++)
+	for(int i=-500; i<=500; i+=10)
 	{
-		glVertex3f(i, floor_height, -50);
-		glVertex3f(i, floor_height, 50);
+		glVertex3f(i, floor_height, -500);
+		glVertex3f(i, floor_height, 500);
 
-		glVertex3f(-50, floor_height, i);
-		glVertex3f(50, floor_height, i);
+		glVertex3f(-500, floor_height, i);
+		glVertex3f(500, floor_height, i);
 		
 	}
 	glEnd();

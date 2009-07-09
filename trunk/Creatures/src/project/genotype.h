@@ -16,15 +16,15 @@ using namespace std;
 
 enum NodeType
 {
-	NODE_CURRENT,
-	NODE_CHILD,
+	NODE_CURRENT = 0,
+	NODE_CHILD = 1,
 };
 
 enum GateType
 {
-	GATE_CONTROL,
-	GATE_SENSOR,
-	GATE_EFFECTOR,
+	GATE_CONTROL = 0,
+	GATE_SENSOR = 1,
+	GATE_EFFECTOR = 2,
 };
 
 //A GateEdge represents a wire in the creature's control system
@@ -131,12 +131,20 @@ struct Genotype
 	//Constructors
 	Genotype() : root(0), nodes(0), edges(0) {}
 	Genotype(const Genotype& t) : root(t.root), nodes(t.nodes), edges(t.edges) {}
+	
 	Genotype operator=(const Genotype& t)
 	{
+		root = t.root;
 		nodes = t.nodes;
 		edges = t.edges;
 		return *this;
 	}
+	
+	//Graph modification stuff
+	void remove_node(int n);
+	void remove_edge(int s, int t);
+	void remove_gate(int n, int g);
+	void remove_wire(int n, int g, int w);
 	
 	//Save/load phenotypes from file
 	void save(ostream& os) const;

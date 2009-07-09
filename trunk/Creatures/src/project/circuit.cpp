@@ -14,6 +14,16 @@ using namespace std;
 namespace Game
 {
 
+void GateFactory::perturbParams(std::vector<float>& params)
+{
+	for(int i=0; i<(int)params.size(); i++)
+	{
+		params[i] += 20. * (drand48() + drand48() + drand48() + drand48()  - 2.); 
+	}
+}
+
+
+
 //An add gate
 struct AddGate : public Gate
 {
@@ -214,7 +224,7 @@ struct ConstantGateFactory : public GateFactory
 	{
 		vector<float> res(1);
 		
-		res[0] = (drand48() - .5) * 1e8;
+		res[0] = (drand48() + drand48() + drand48() + drand48() - 2.) * 1e3;
 		
 		return res;
 	}
@@ -233,6 +243,237 @@ struct ConstantGateFactory : public GateFactory
 	}
 
 };
+
+//A constant signal
+struct SineGate : public Gate
+{
+	float freq, ampl, phase;
+	
+	SineGate(float freq_, float amp_, float phase_) : freq(freq_), ampl(amp_), phase(phase_) {}
+	virtual ~SineGate() {}
+	
+	virtual void update()
+	{
+		for(int i=0; i<(int)inputs.size(); i++)
+			write(i, ampl * sin(read(i)*freq + phase));
+	}
+};
+struct SineGateFactory : public GateFactory
+{
+	//Returns the number of parameters required to construct a gate
+	virtual int numParams()
+	{
+		return 3;
+	}
+	
+	//Generates a random vector of parameters
+	virtual std::vector<float> generateParams()
+	{
+		vector<float> res(3);
+		
+		res[0] = (drand48() + drand48() + drand48() + drand48() - 2.) * 10.;
+		res[1] = (drand48() + drand48() + drand48() + drand48() - 2.) * 1e3;
+		res[2] = drand48() * M_PI;
+		
+		return res;
+	}
+	
+	//Normalizes the parameter vector
+	virtual void normalize(std::vector<float>& params)
+	{
+		params.resize(3);
+	}
+	
+	//Creates a gate
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		assert(params.size() == 3);
+		return new SineGate(params[0], params[1], params[2]);
+	}
+
+};
+
+
+struct ExpGate : public Gate
+{
+	ExpGate() {}
+	virtual ~ExpGate() {}
+	
+	virtual void update()
+	{
+		for(int i=0; i<(int)inputs.size(); i++)
+			write(i, exp(read(i)));
+	}
+};
+struct ExpGateFactory : public AddGateFactory
+{
+	//Creates a gate
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new ExpGate();
+	}
+};
+
+
+struct LogGate : public Gate
+{
+	LogGate() {}
+	virtual ~LogGate() {}
+	
+	virtual void update()
+	{
+		for(int i=0; i<(int)inputs.size(); i++)
+		{
+			float x = read(i);
+			if(x <= 1e-6)
+			{
+				write(i, 0.);
+			}
+			else
+			{
+				write(i, log(read(i)));
+			}
+		}
+	}
+};
+struct LogGateFactory : public AddGateFactory
+{
+	//Creates a gate
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new LogGate();
+	}
+};
+
+
+struct RecipGate : public Gate
+{
+	RecipGate() {}
+	virtual ~RecipGate() {}
+	virtual void update()
+	{
+		for(int i=0; i<(int)inputs.size(); i++)
+		{
+			float x = read(i);
+			if(abs(x) <= 1e-6)
+			{
+				write(i, 0.);
+			}
+			else
+			{
+				write(i, 1./read(i));
+			}
+		}
+	}
+};
+struct RecipGateFactory : public AddGateFactory
+{
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new RecipGate();
+	}
+};
+
+
+
+struct NegGate : public Gate
+{
+	NegGate() {}
+	virtual ~NegGate() {}
+	virtual void update()
+	{
+		for(int i=0; i<(int)inputs.size(); i++)
+			write(i, -read(i));
+	}
+};
+struct NegGateFactory : public AddGateFactory
+{
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new NegGate();
+	}
+};
+
+
+struct TanGate : public Gate
+{
+	TanGate() {}
+	virtual ~TanGate() {}
+	virtual void update()
+	{
+		for(int i=0; i<(int)inputs.size(); i++)
+			write(i, tan(read(i)));
+	}
+};
+struct TanGateFactory : public AddGateFactory
+{
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new TanGate();
+	}
+};
+
+struct ATanGate : public Gate
+{
+	ATanGate() {}
+	virtual ~ATanGate() {}
+	virtual void update()
+	{
+		for(int i=0; i<(int)inputs.size(); i++)
+			write(i, atan(read(i)));
+	}
+};
+struct ATanGateFactory : public AddGateFactory
+{
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new ATanGate();
+	}
+};
+
+
+struct MaxGate : public Gate
+{
+	MaxGate() {}
+	virtual ~MaxGate() {}
+	virtual void update()
+	{
+		float m = -1e20;
+		for(int i=0; i<(int)inputs.size(); i++)
+			m = max(m, read(i));
+		write(0, m);
+	}
+};
+struct MaxGateFactory : public AddGateFactory
+{
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new MaxGate();
+	}
+};
+
+struct MinGate : public Gate
+{
+	MinGate() {}
+	virtual ~MinGate() {}
+	virtual void update()
+	{
+		float m = 1e20;
+		for(int i=0; i<(int)inputs.size(); i++)
+			m = min(m, read(i));
+		write(0, m);
+	}
+};
+struct MinGateFactory : public AddGateFactory
+{
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new MinGate();
+	}
+};
+
+
+
 
 
 //GateFactory registration
@@ -264,8 +505,17 @@ GateInitializer()
 	registerGateFactory("add", new AddGateFactory());
 	registerGateFactory("mul", new MultiplyGateFactory());
 	registerGateFactory("multiplex", new MultiplexGateFactory());
-	registerGateFactory("timer", new MultiplexGateFactory());
+	registerGateFactory("timer", new TimerGateFactory());
 	registerGateFactory("const", new ConstantGateFactory());
+	registerGateFactory("sine", new SineGateFactory());
+	registerGateFactory("exp", new ExpGateFactory());
+	registerGateFactory("log", new LogGateFactory());
+	registerGateFactory("recip", new RecipGateFactory());
+	registerGateFactory("negate", new NegGateFactory());
+	registerGateFactory("tan", new TanGateFactory());
+	registerGateFactory("atan", new ATanGateFactory());
+	registerGateFactory("max", new MaxGateFactory());
+	registerGateFactory("min", new MinGateFactory());
 }
 };
 GateInitializer init_gates;
