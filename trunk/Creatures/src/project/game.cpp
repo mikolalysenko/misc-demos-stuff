@@ -35,7 +35,7 @@ float delta_t		= 0.01;
 bool paused			= false;
 
 //Number of extra frames to run
-int frame_skip		= 0;
+int frame_skip		= 500;
 
 NxMat34 camera;
 
@@ -121,7 +121,7 @@ void init()
 	}
 	*/
 	
-	FitnessTest* tester = new FitnessTest(20000., 5000.);
+	FitnessTest* tester = new FitnessTest(30000., 10000.);
 	
 	population = new Population(
 		100,

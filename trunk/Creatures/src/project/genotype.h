@@ -52,6 +52,17 @@ struct GateNode
 	vector<float>	params;
 	string			name;
 	
+	GateNode() {}
+	GateNode(const GateNode& other) :
+		params(other.params), name(other.name), wires(other.wires) {}
+	GateNode& operator=(const GateNode& other)
+	{
+		params = other.params;
+		name = other.name;
+		wires = other.wires;
+		return *this;
+	}
+	
 	//Serialization
 	void save(ostream& os) const;
 	static GateNode load(istream& is);
@@ -80,7 +91,9 @@ struct Edge
 	NxVec3	s_axis,  t_axis,
 			s_norm,  t_norm,
 			s_point, t_point;
-
+			
+	float twist_limit[2], swing_limit[2];
+			
 	//Constructor
 	Edge() : marked(false) {}	
 

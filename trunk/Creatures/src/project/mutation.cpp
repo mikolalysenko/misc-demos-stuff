@@ -13,13 +13,13 @@ const double MUTATION_RATE		= 0.01;
 
 const double NODE_CREATION_RATE	= 0.002;
 const double GATE_CREATION_RATE	= 0.002;
-const double EDGE_CREATION_RATE = 0.002;
+const double EDGE_CREATION_RATE = 0.004;
 const double WIRE_CREATION_RATE = 0.002;
 
-const double NODE_KILL_RATE 	= 0.005;
-const double GATE_KILL_RATE 	= 0.005;
-const double EDGE_KILL_RATE 	= 0.005;
-const double WIRE_KILL_RATE 	= 0.005;
+const double NODE_KILL_RATE 	= 0.008;
+const double GATE_KILL_RATE 	= 0.008;
+const double EDGE_KILL_RATE 	= 0.008;
+const double WIRE_KILL_RATE 	= 0.008;
 
 const double ROOT_RELOC_RATE	= 0.001;
 
@@ -38,9 +38,11 @@ NxVec3 rand_vec(int x = 5)
 
 NxQuat rand_quat(int x = 5)
 {
+	NxVec3 rv = rand_vec(x);
+	rv.normalize();
+	
 	NxQuat rq;
-	rq.setXYZW(nrand(x), nrand(x), nrand(x), nrand(x));
-	rq.normalize();
+	rq.fromAngleAxis(nrand(x)*180., rv);
 	return rq;
 }
 
@@ -88,6 +90,14 @@ void perturb_edge(Genotype& g, int s, int x)
 		
 	if(drand48() < MUTATION_RATE)
 		e.target = rand() % g.nodes.size();
+		
+	for(int i=0; i<2; i++)
+	{
+		if(drand48() < MUTATION_RATE)
+			e.swing_limit[i] += nrand() / 10.;
+		if(drand48() < MUTATION_RATE)
+			e.twist_limit[i] += nrand() / 10.;
+	}
 		
 	if(drand48() < MUTATION_RATE)
 	{
@@ -162,6 +172,12 @@ void create_edge(Genotype& genes, int x)
 	tmp.rot = rand_quat(1);
 	tmp.scale = nrand() + 1.;
 	tmp.reflect = (rand() & 2) ? 1 : -1;
+	
+	for(int i=0; i<2; i++)
+	{
+		tmp.swing_limit[i] = (nrand(3) + 1.5) * M_PI / 3.;
+		tmp.twist_limit[i] = (nrand(3)) * 2. * M_PI / 3.;
+	}
 	
 	//Joint information (must be a hinge)
 	NxVec3 s_size = genes.nodes[tmp.source].size;
