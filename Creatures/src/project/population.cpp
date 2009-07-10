@@ -100,12 +100,20 @@ Population::Population(
 	  tester(tester_),
 	  current_test(0)
 {
+	
 	//Generate a random intial population
 	for(int i=0; i<(int)species.size(); i++)
 	{
 		species[i] = make_pair(0., randomCreature());
 	}
-	
+
+/*
+	//Recover best creature
+	ifstream best("data/best.dna");
+	species[0] = make_pair(0., Genotype::load(best));
+	best.close();
+*/
+
 	for(int i=0; i<(int)best_species.size(); i++)
 	{
 		best_species[i] = species[0];
@@ -160,7 +168,6 @@ void Population::next_round()
 	}
 	
 	cout << "Top score:" << endl;
-	
 	cout << best_species[best_species.size()-1].first << endl;
 	
 	ofstream best("data/best.dna");

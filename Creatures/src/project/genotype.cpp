@@ -189,6 +189,9 @@ void Edge::save(ostream& os) const
 		<< s_norm.x  << ' ' << s_norm.y  << ' ' << s_norm.z  << ' '
 		<< t_norm.x  << ' ' << t_norm.y  << ' ' << t_norm.z  << ' '
 
+		<< swing_limit[0] << ' ' << swing_limit[1] << ' '
+		<< twist_limit[0] << ' ' << twist_limit[1] << ' '
+
 		<< endl;
 }
 
@@ -211,6 +214,10 @@ Edge Edge::load(istream& is)
 		
 		>> res.s_norm.x  >> res.s_norm.y  >> res.s_norm.z
 		>> res.t_norm.x  >> res.t_norm.y  >> res.t_norm.z
+
+		>> res.swing_limit[0] >> res.swing_limit[1]
+		>> res.twist_limit[0] >> res.twist_limit[1]
+
 		
 		)) throw "Invalid edge";
 	return res;
@@ -435,6 +442,15 @@ void Edge::normalize(Genotype& genes)
 	if(reflect < 0)	reflect = -1;
 	else			reflect =  1;
 	
+	for(int i=0; i<2; i++)
+	{
+		twist_limit[i] = max(min(twist_limit[i], (float)(M_PI)), 0.f);
+		swing_limit[i] = max(min(swing_limit[i], (float)(M_PI)), (float)(-M_PI));
+	}
+	
+	if(twist_limit[0] >= twist_limit[1])
+		twist_limit[0] = twist_limit[1];
+	
 	//Fix up possible bounds issues
 	target %= genes.nodes.size();
 }
@@ -615,11 +631,10 @@ BodyPart* genCreatureRec(
 	creature->body.push_back(res);
 	
 	//Generate gates
-	vector<GateNode>& gates = node.gates;
-	for(int i=0; i<(int)gates.size(); i++)
+	for(int i=0; i<(int)node.gates.size(); i++)
 	{
-		GateFactory* gf = getFactory(gates[i].name);	
-		res->controls.push_back(gf->createGate(gates[i].params));
+		GateFactory* gf = getFactory(node.gates[i].name);	
+		res->controls.push_back(gf->createGate(node.gates[i].params));
 	}
 	
 	//For each edge:
@@ -669,17 +684,36 @@ BodyPart* genCreatureRec(
 		NxD6JointDesc joint_desc;
 		joint_desc.setToDefault();
 		
-		joint_desc.maxForce =			1e6;
-		joint_desc.maxTorque =			1e6;
+		joint_desc.maxForce =			1e7;
+		joint_desc.maxTorque =			1e7;
 		
 		joint_desc.xMotion = joint_desc.yMotion = joint_desc.zMotion = NX_D6JOINT_MOTION_LOCKED;
 		
-		joint_desc.swing1Motion = joint_desc.swing2Motion = joint_desc.twistMotion = NX_D6JOINT_MOTION_FREE;
+		joint_desc.swing1Motion = joint_desc.swing2Motion = joint_desc.twistMotion = NX_D6JOINT_MOTION_LIMITED;
+		
+		//Set joint limits
+		NxJointLimitSoftDesc joint_limits;
+		joint_limits.damping = 10.f;
+		joint_limits.restitution = 3.f;
+		joint_limits.spring = 300.f;
+		
+		joint_limits.value = edge.swing_limit[0];
+		joint_desc.swing1Limit = joint_limits;
+		
+		joint_limits.value = edge.swing_limit[1];
+		joint_desc.swing2Limit = joint_limits;
+		
+		joint_limits.value = edge.twist_limit[0];
+		joint_desc.twistLimit.low = joint_limits;
+		
+		joint_limits.value = edge.twist_limit[1];
+		joint_desc.twistLimit.high = joint_limits;
 		
 		NxJointDriveDesc drive_limits;
-		drive_limits.damping = 0.05;
-		drive_limits.spring = 0.05;
-		drive_limits.forceLimit = 400.;
+		
+		drive_limits.damping = 10.;
+		drive_limits.spring = 300.;
+		drive_limits.forceLimit = 1e4;
 		drive_limits.driveType = NX_D6JOINT_DRIVE_VELOCITY;
 		joint_desc.slerpDrive = drive_limits;
 		
@@ -717,11 +751,11 @@ BodyPart* genCreatureRec(
 	}
 	
 	//Rig up wires
-	for(int i=0; i<(int)gates.size(); i++)
+	for(int i=0; i<(int)node.gates.size(); i++)
 	{
-		for(int j=0; j<(int)gates[i].wires.size(); j++)
+		for(int j=0; j<(int)node.gates[i].wires.size(); j++)
 		{
-			GateEdge ge = gates[i].wires[j];
+			GateEdge ge = node.gates[i].wires[j];
 			
 			//Hard part: need to find target gate
 			BodyPart* container;
@@ -741,7 +775,8 @@ BodyPart* genCreatureRec(
 				default: assert(false);
 			}
 			
-			Gate* b;
+			Gate * a = res->controls[i];
+			Gate* b = a;
 			switch(ge.gate_type)
 			{
 				case GATE_SENSOR:
@@ -756,6 +791,7 @@ BodyPart* genCreatureRec(
 				}
 
 				case GATE_CONTROL:
+				if(container->controls.size() > 0)
 					b = container->controls[ge.gate % container->controls.size()];
 				break;
 				
@@ -763,7 +799,6 @@ BodyPart* genCreatureRec(
 			}
 			
 			//Get default gate
-			Gate * a = res->controls[i];
 			if(ge.direction > 0)
 				swap(a, b);
 

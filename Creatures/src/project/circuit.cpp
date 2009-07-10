@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cassert>
 #include <vector>
 #include <map>
@@ -158,7 +159,7 @@ struct TimerGate : public Gate
 		}
 	}
 };
-struct TimerFactory : public GateFactory
+struct TimerGateFactory : public GateFactory
 {
 	//Returns the number of parameters required to construct a gate
 	virtual int numParams()
@@ -473,6 +474,47 @@ struct MinGateFactory : public AddGateFactory
 };
 
 
+struct IfGate : public Gate
+{
+	IfGate() {}
+	virtual ~IfGate() {}
+	virtual void update()
+	{
+		if(read(0) > 0.f)
+			write(0, read(1));
+		else
+			write(0, read(2));
+	}
+};
+struct IfGateFactory : public AddGateFactory
+{
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new IfGate();
+	}
+};
+
+struct MemoryGate : public Gate
+{
+	float memory;
+	
+	MemoryGate() : memory(0) {}
+	
+	virtual ~MemoryGate() {}
+	virtual void update()
+	{
+		if(read(0) > 0.)
+			memory = read(1);
+		write(0, memory);
+	}
+};
+struct MemoryGateFactory : public AddGateFactory
+{
+	virtual Gate* createGate(std::vector<float> params)
+	{
+		return new MemoryGate();
+	}
+};
 
 
 
@@ -487,6 +529,8 @@ void registerGateFactory(const std::string& name, GateFactory* factory)
 
 GateFactory* getFactory(const std::string& name)
 {
+	if(name.size() == 0)
+		return factories[0];
 	assert(factories.find(name) != factories.end());
 	return factories[name];
 }
@@ -516,6 +560,8 @@ GateInitializer()
 	registerGateFactory("atan", new ATanGateFactory());
 	registerGateFactory("max", new MaxGateFactory());
 	registerGateFactory("min", new MinGateFactory());
+	registerGateFactory("if", new IfGateFactory());
+	registerGateFactory("mem", new MemoryGateFactory());
 }
 };
 GateInitializer init_gates;
