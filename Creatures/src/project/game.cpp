@@ -42,7 +42,7 @@ NxMat34 camera;
 
 
 //Scenario stuff
-int floor_height = -50.; 
+int floor_height = -75.; 
 
 
 //Creature* critter;
@@ -124,7 +124,7 @@ void init()
 	FitnessTest* tester = new FitnessTest(45000., 15000.);
 	
 	population = new Population(
-		500,
+		150,
 		10,
 		tester);
 }

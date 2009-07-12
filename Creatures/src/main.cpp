@@ -120,11 +120,13 @@ void main_loop()
 		scene->flushStream();
 		scene->fetchResults(NX_RIGID_BODY_FINISHED, true);
 		
+		/*
 		//Synchronize frame rate
 		last_time += delta_t * 1000.;
 		long long compute_time = (long long)last_time - (long long)SDL_GetTicks();
 		if(compute_time > 0)
 			SDL_Delay(compute_time);
+		*/
 	}
 }
 

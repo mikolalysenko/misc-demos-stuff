@@ -209,9 +209,8 @@ void Edge::save(ostream& os) const
 		<< s_norm.x  << ' ' << s_norm.y  << ' ' << s_norm.z  << ' '
 		<< t_norm.x  << ' ' << t_norm.y  << ' ' << t_norm.z  << ' '
 
-		<< swing_limit[0] << ' ' << swing_limit[1] << ' '
-		<< twist_limit[0] << ' ' << twist_limit[1] << ' '
-
+		<< strength << ' ' << stiffness << ' '
+		
 		<< endl;
 }
 
@@ -235,9 +234,7 @@ Edge Edge::load(istream& is)
 		>> res.s_norm.x  >> res.s_norm.y  >> res.s_norm.z
 		>> res.t_norm.x  >> res.t_norm.y  >> res.t_norm.z
 
-		>> res.swing_limit[0] >> res.swing_limit[1]
-		>> res.twist_limit[0] >> res.twist_limit[1]
-
+		>> res.strength >> res.stiffness
 		
 		)) throw "Invalid edge";
 	return res;
@@ -460,6 +457,13 @@ void Edge::normalize(Genotype& genes)
 
 	//Fix up the quaternion
 	rot.normalize();
+	
+	if(stiffness < 10.)
+		stiffness = 10.;
+	if(strength < 0.)
+		strength = 0.;
+	if(strength > 1e6)
+		strength = 1e6;
 
 	//Fix points to surface of bodies
 	s_point = genes.nodes[source].closest_pt(s_point);
@@ -491,15 +495,6 @@ void Edge::normalize(Genotype& genes)
 	//Fix up reflection
 	if(reflect < 0)	reflect = -1;
 	else			reflect =  1;
-	
-	for(int i=0; i<2; i++)
-	{
-		twist_limit[i] = max(min(twist_limit[i], (float)(M_PI)), 0.f);
-		swing_limit[i] = max(min(swing_limit[i], (float)(M_PI)), (float)(-M_PI));
-	}
-	
-	if(twist_limit[0] >= twist_limit[1])
-		twist_limit[0] = twist_limit[1];
 	
 	//Fix up possible bounds issues
 	target %= genes.nodes.size();
@@ -738,38 +733,18 @@ BodyPart* genCreatureRec(
 		NxD6JointDesc joint_desc;
 		joint_desc.setToDefault();
 		
-		joint_desc.maxForce =			1e7;
-		joint_desc.maxTorque =			1e7;
+		joint_desc.maxForce =			1e8;
+		joint_desc.maxTorque =			1e8;
 		
 		joint_desc.xMotion = joint_desc.yMotion = joint_desc.zMotion = NX_D6JOINT_MOTION_LOCKED;
 		
 		joint_desc.swing1Motion = joint_desc.swing2Motion = joint_desc.twistMotion = NX_D6JOINT_MOTION_FREE;
 		
-		/*
-		//Set joint limits
-		NxJointLimitSoftDesc joint_limits;
-		joint_limits.damping = 10.f;
-		joint_limits.restitution = 3.f;
-		joint_limits.spring = 300.f;
-		
-		joint_limits.value = edge.swing_limit[0];
-		joint_desc.swing1Limit = joint_limits;
-		
-		joint_limits.value = edge.swing_limit[1];
-		joint_desc.swing2Limit = joint_limits;
-		
-		joint_limits.value = edge.twist_limit[0];
-		joint_desc.twistLimit.low = joint_limits;
-		
-		joint_limits.value = edge.twist_limit[1];
-		joint_desc.twistLimit.high = joint_limits;
-		*/
-		
 		NxJointDriveDesc drive_limits;
 		
-		drive_limits.damping = 10.;
-		drive_limits.spring = 300.;
-		drive_limits.forceLimit = 5000;
+		drive_limits.damping = edge.stiffness/20.;
+		drive_limits.spring = edge.stiffness;
+		drive_limits.forceLimit = edge.strength;
 		drive_limits.driveType = NX_D6JOINT_DRIVE_VELOCITY;
 		joint_desc.slerpDrive = drive_limits;
 		

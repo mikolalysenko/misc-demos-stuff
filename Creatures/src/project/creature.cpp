@@ -108,9 +108,9 @@ void JointSensor::update()
 //A joint effector drives the creature's motion
 void JointEffector::update()
 {
-	NxVec3 axis = NxVec3(read(1), read(2), read(3));
+	NxVec3 axis = NxVec3(read(3), read(2), read(1));
 	if(axis.magnitude() <= 1e-4)
-		axis = NxVec3(1, 0, 0);
+		axis = NxVec3(0, 0, 1);
 	axis.normalize();
 	
 	NxQuat q;
