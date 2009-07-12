@@ -167,6 +167,8 @@ void create_edge(Genotype& genes, int x)
 	//Number of times this edge may be traversed
 	tmp.source = x;
 	tmp.target = rand() % genes.nodes.size();
+	while(tmp.target == x && drand48() < .8)
+		tmp.target = rand() % genes.nodes.size();
 	
 	//Frame of reference for new body part
 	tmp.rot = rand_quat(1);
@@ -186,35 +188,18 @@ void create_edge(Genotype& genes, int x)
 	tmp.s_axis[rand()%3]=(rand()%2?1.f:-1.f);
 	tmp.s_axis = rand_vec();
 	tmp.s_norm = rand_vec();
-	tmp.s_point = NxVec3(nrand(3)*s_size.x,
-				nrand(3)*s_size.y,
-				nrand(3)*s_size.z);
-	for(int i=0; i<3; i++)
-	{
-		if(tmp.s_axis[i] < 0)
-			tmp.s_point[i] = -s_size[i];
-		else
-			tmp.s_point[i] = s_size[i];
-	}
-	tmp.s_axis += rand_vec() * 0.2;
+	tmp.s_point = NxVec3(nrand(3)*s_size.x/1.5,
+				nrand(3)*s_size.y/1.5,
+				nrand(3)*s_size.z/1.5);
 
 
 	NxVec3 t_size = genes.nodes[tmp.target].size;
 	tmp.t_axis = NxVec3(0,0,0);
 	tmp.t_axis[rand()%3]=(rand()%2?1.f:-1.f);
 	tmp.t_norm = rand_vec();
-	tmp.t_point = NxVec3(nrand(3)*t_size.x,
-				nrand(3)*t_size.y,
-				nrand(3)*t_size.z);
-	for(int i=0; i<3; i++)
-	{
-		if(tmp.t_axis[i] < 0)
-			tmp.t_point[i] = -t_size[i];
-		else
-			tmp.t_point[i] = t_size[i];
-	}
-	tmp.t_axis += rand_vec() * 0.2;
-				
+	tmp.t_point = NxVec3(nrand(3)*t_size.x/1.5,
+				nrand(3)*t_size.y/1.5,
+				nrand(3)*t_size.z/1.5);
 				
 	
 	genes.edges[x].push_back(tmp);

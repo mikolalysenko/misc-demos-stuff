@@ -18,6 +18,26 @@ using namespace Common;
 namespace Game
 {
 
+
+void print_vec(const NxVec3& v)
+{
+	cout << v.x << ',' <<v.y << ',' << v.z << endl;
+}
+void print_mat(const NxMat33& m)
+{
+	for(int i=0; i<3; i++)
+	{
+	for(int j=0; j<3; j++)
+	{
+		cout << m(i,j) << ',';
+	}
+		cout << endl;
+	}
+}
+
+
+
+
 //Checks that the given token is in the stream
 void assert_token(istream& is, const string& token)
 {
@@ -415,6 +435,23 @@ void Node::normalize()
 	length = max(length, 1.f);
 }
 
+NxVec3 max_dim(NxVec3 sz, NxVec3 v)
+{
+	NxVec3 res = NxVec3(0,0,0);
+	for(int i=0; i<3; i++)
+	{
+		if(abs(abs(v[i]) - sz[i]) <= 1e-4)
+		{
+			res[i] = v[i] > 0 ? 1 : -1;
+		}
+	}
+	if(res.magnitude() < 1e-4)
+		return NxVec3(0, 0, 1);
+	
+	res.normalize();
+	return res;
+}
+
 
 //Normalizes an edge
 void Edge::normalize(Genotype& genes)
@@ -431,12 +468,25 @@ void Edge::normalize(Genotype& genes)
 	//Renormalize edge frame
 	s_axis /= s_axis.magnitude();
 	t_axis /= t_axis.magnitude();
+
+
+	//Adjust s_axis so that it is at least 30 deg away from surface
+	NxVec3 s_face = max_dim(genes.nodes[source].size, s_point), 
+			t_face = max_dim(genes.nodes[target].size, t_point);
+	s_axis = s_face;
+	t_axis = t_face;
 	
-	s_norm -= s_axis * s_axis.dot(s_norm) / s_norm.magnitude();
-	s_norm /= s_norm.magnitude();
+	s_norm.normalize();
+	s_norm -= s_axis * s_axis.dot(s_norm);
+	s_norm.normalize();
 	
-	t_norm -= t_axis * t_axis.dot(t_norm) / t_norm.magnitude();
-	t_norm /= t_norm.magnitude();
+	t_norm.normalize();
+	t_norm -= t_axis * t_axis.dot(t_norm);
+	t_norm.normalize();
+	
+	//Adjust rotation based on the s-axis, t-axis parameters
+
+	
 	
 	//Fix up reflection
 	if(reflect < 0)	reflect = -1;
@@ -587,8 +637,6 @@ void Genotype::remove_wire(int n, int g, int w)
 	gg.wires.resize(gg.wires.size()-1);
 }
 
-
-
 //Generates a body part
 BodyPart* genCreatureRec(
 	Genotype&			genes,
@@ -647,12 +695,16 @@ BodyPart* genCreatureRec(
 			continue;
 		edge.marked = true;
 		
+	
+		NxMat33 R = edge.rot;
+						
 		//Compute translation from attachment points
-		NxVec3 s_point = edge.s_point * (scale + 0.02), 
-			   t_point = edge.t_point * (scale * edge.scale + 0.02);
+		NxVec3 s_point = edge.s_point * (scale + 0.01), 
+			   t_point = edge.t_point * (scale * edge.scale + 0.01);
+
 		
 		//Transform frame
-		NxMat33 rot = pose.M * NxMat33(edge.rot), rotInv;
+		NxMat33 rot = pose.M * R, rotInv;
 		rot.getInverse(rotInv);
 		
 		NxMat34 npose;
@@ -672,6 +724,8 @@ BodyPart* genCreatureRec(
 		//If failed, then skip it
 		if(tmp == NULL)
 		{
+			cout << "Failed to create body part" << endl;
+		
 			edge.marked = false;
 			
 			for(int i=c_partlen; i<(int)creature->body.size(); i++)
@@ -689,8 +743,9 @@ BodyPart* genCreatureRec(
 		
 		joint_desc.xMotion = joint_desc.yMotion = joint_desc.zMotion = NX_D6JOINT_MOTION_LOCKED;
 		
-		joint_desc.swing1Motion = joint_desc.swing2Motion = joint_desc.twistMotion = NX_D6JOINT_MOTION_LIMITED;
+		joint_desc.swing1Motion = joint_desc.swing2Motion = joint_desc.twistMotion = NX_D6JOINT_MOTION_FREE;
 		
+		/*
 		//Set joint limits
 		NxJointLimitSoftDesc joint_limits;
 		joint_limits.damping = 10.f;
@@ -708,30 +763,54 @@ BodyPart* genCreatureRec(
 		
 		joint_limits.value = edge.twist_limit[1];
 		joint_desc.twistLimit.high = joint_limits;
+		*/
 		
 		NxJointDriveDesc drive_limits;
 		
 		drive_limits.damping = 10.;
 		drive_limits.spring = 300.;
-		drive_limits.forceLimit = 1e4;
+		drive_limits.forceLimit = 5000;
 		drive_limits.driveType = NX_D6JOINT_DRIVE_VELOCITY;
 		joint_desc.slerpDrive = drive_limits;
 		
 		joint_desc.actor[0] = 			res->actor;
-		joint_desc.localAnchor[0] =		edge.s_point * (scale + 0.02);
+		joint_desc.localAnchor[0] =		s_point;
 		joint_desc.localAxis[0] =		edge.s_axis;
 		joint_desc.localNormal[0] = 	edge.s_norm;
 		
 		joint_desc.actor[1] = 			tmp->actor;
-		joint_desc.localAnchor[1] =		edge.t_point * (scale * edge.scale + 0.02);
+		joint_desc.localAnchor[1] =		t_point;
 		joint_desc.localAxis[1] =		edge.t_axis;
 		joint_desc.localNormal[1] = 	edge.t_norm;
 		
 	    NxJoint * joint = scene->createJoint(joint_desc);
 	    
+	    /*
+	    
+	    cout << "s_size = ";
+	    print_vec(scale * node.size);
+	    cout << "s = ";
+		print_vec(s_point);
+		cout << "A = ";
+		print_mat(A);
+		
+		cout << "t_size = ";
+		print_vec(scale * edge.scale * genes.nodes[edge.target].size);
+		cout << "t = ";
+		print_vec(t_point);
+		cout << "B = ";
+		print_mat(B);
+		
+		cout << "R = ";
+		print_mat(R);
+		
+		print_mat(R * B);
+		*/
+		
+	    
 	    if(joint == NULL)
 	    {
-	    	//cout << "Failed to create joint!" << endl;
+	    	cout << "Failed to create joint!" << endl;
 	    	delete tmp;
 	    	edge.marked = false;
 	    	
@@ -828,6 +907,7 @@ Creature* Genotype::createCreature(NxMat34 pose)
 	//Check for failure
 	if(b == NULL)
 	{
+		cout << "Creature build fail!" << endl;
 		delete res;
 		return NULL;
 	}

@@ -108,7 +108,15 @@ void JointSensor::update()
 //A joint effector drives the creature's motion
 void JointEffector::update()
 {
-	static_cast<NxD6Joint*>(joint)->setDriveAngularVelocity(NxVec3(read(0), read(1), read(2)));
+	NxVec3 axis = NxVec3(read(1), read(2), read(3));
+	if(axis.magnitude() <= 1e-4)
+		axis = NxVec3(1, 0, 0);
+	axis.normalize();
+	
+	NxQuat q;
+	q.fromAngleAxis(read(0), axis);
+
+	static_cast<NxD6Joint*>(joint)->setDriveOrientation(q);
 }
 
 //Copied from SDK
@@ -163,42 +171,19 @@ void BodyPart::init_shape(NxShapeDesc* foo, const NxMat34& tpose)
 
 	//Check for collision
 	
-	bool fits = false;
 	NxMat34 pose = tpose;
 
-	NxMat33 ID;
-	ID.id();
-	NxBox box(NxVec3(0,0,0), size*.9, ID);
-	box.rotate(pose, box);
-
+/*
+	NxBox box(pose.t, size*.6, pose.M);
 	if(scene->checkOverlapOBB(box))
 	{
-		fits = true;
+		return;
 	}
-	else for(int i=0; i<30; i++)
-	{
-		NxMat34 tmp;
-		tmp.t = NxVec3(size.x * (drand48()-.5) / 10., size.y*(drand48()-.5)/10., size.z*(drand48()-.5)/10.);
-		NxQuat r;
-		
-		NxVec3 v = NxVec3(drand48()-.5,drand48()-.5,drand48()-.5);
-		v.normalize();
-		r.fromAngleAxis(30. * (drand48() - .5), v);
-		tmp.M.fromQuat(r);
-		
-		pose = tpose * tmp;
-		
-		if(scene->checkOverlapOBB(box))
-		{
-			fits = true;
-			break;
-		}
-	}
-	
+*/
 	
 	NxBoxShapeDesc shape_desc;
 	shape_desc.dimensions = size;
-	shape_desc.ccdSkeleton = CreateCCDSkeleton(size*0.8f);
+	shape_desc.ccdSkeleton = CreateCCDSkeleton(size*0.6f);
 	shape_desc.shapeFlags |= NX_SF_DYNAMIC_DYNAMIC_CCD; //Activate dynamic-dynamic CCD for 
 
 	// Create body
