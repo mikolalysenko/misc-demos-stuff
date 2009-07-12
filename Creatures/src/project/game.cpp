@@ -35,14 +35,14 @@ float delta_t		= 0.01;
 bool paused			= false;
 
 //Number of extra frames to run
-int frame_skip		= 500;
+int frame_skip		= 0;
 
 NxMat34 camera;
 
 
 
 //Scenario stuff
-int floor_height = -10; 
+int floor_height = -50.; 
 
 
 //Creature* critter;
@@ -121,10 +121,10 @@ void init()
 	}
 	*/
 	
-	FitnessTest* tester = new FitnessTest(30000., 10000.);
+	FitnessTest* tester = new FitnessTest(45000., 15000.);
 	
 	population = new Population(
-		100,
+		500,
 		10,
 		tester);
 }
@@ -199,12 +199,12 @@ void update()
 	
 	if(key_press('-'))
 	{
-		frame_skip -= 5;
+		frame_skip -= 25;
 		cout << "frameskip = " << frame_skip << endl;
 	}
 	if(key_press('='))
 	{
-		frame_skip += 5;
+		frame_skip += 25;
 		cout << "frameskip = " << frame_skip << endl;
 	}
 	frame_skip = max(frame_skip, 0);
@@ -251,13 +251,13 @@ void draw()
 	//Draw floor
 	glBegin(GL_LINES);
 	glColor3f(1,1,1);
-	for(int i=-500; i<=500; i+=10)
+	for(int i=-2500; i<=2500; i+=10)
 	{
-		glVertex3f(i, floor_height, -500);
-		glVertex3f(i, floor_height, 500);
+		glVertex3f(i, floor_height, -2500);
+		glVertex3f(i, floor_height, 2500);
 
-		glVertex3f(-500, floor_height, i);
-		glVertex3f(500, floor_height, i);
+		glVertex3f(-2500, floor_height, i);
+		glVertex3f(2500, floor_height, i);
 		
 	}
 	glEnd();

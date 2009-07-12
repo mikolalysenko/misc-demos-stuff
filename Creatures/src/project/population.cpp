@@ -28,8 +28,16 @@ void FitnessTest::start_test(Genotype& genes)
 	cout << "Generating creature..." << endl;
 	NxMat34 start_pos;
 	start_pos.id();
+	
 	creature = genes.createCreature(start_pos);
+	
+	if(creature == NULL)
+	{
+		cout << "Failed to construct creature!" << endl;	
+	}
+	
 	base_position = NxVec3(0.,0.,0.);
+	fitness = 0.;
 	current_time = 0.;
 	max_height = -1e10;
 }
@@ -145,8 +153,9 @@ void Population::update()
 		}
 		
 		//Start new test
-		tester->start_test(species[current_test].second);
 		current_test++;
+		cout << "Testing : " << current_test << endl;
+		tester->start_test(species[current_test].second);
 	}
 }
 
