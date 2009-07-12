@@ -225,7 +225,7 @@ struct ConstantGateFactory : public GateFactory
 	{
 		vector<float> res(1);
 		
-		res[0] = (drand48() + drand48() + drand48() + drand48() - 2.) * 1e3;
+		res[0] = (drand48() + drand48() + drand48() + drand48() - 2.)*20.;
 		
 		return res;
 	}

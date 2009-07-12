@@ -37,7 +37,7 @@ void FitnessTest::start_test(Genotype& genes)
 	}
 	
 	base_position = NxVec3(0.,0.,0.);
-	fitness = 0.;
+	fitness = 1e-4;
 	current_time = 0.;
 	max_height = -1e10;
 }
@@ -155,7 +155,7 @@ void Population::update()
 		//Start new test
 		current_test++;
 		cout << "Testing : " << current_test << endl;
-		tester->start_test(species[current_test].second);
+		tester->start_test(species[current_test-1].second);
 	}
 }
 

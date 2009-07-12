@@ -69,7 +69,7 @@ void perturb_edge(Genotype& g, int s, int x)
 	}
 	
 	if(drand48() < MUTATION_RATE)
-	e.scale *= fabsf(nrand());
+		e.scale *= (2.5 + nrand()) / 2.5;
 
 	if(drand48() < MUTATION_RATE)
 		e.reflect *= -1;
@@ -90,14 +90,12 @@ void perturb_edge(Genotype& g, int s, int x)
 		
 	if(drand48() < MUTATION_RATE)
 		e.target = rand() % g.nodes.size();
-		
-	for(int i=0; i<2; i++)
-	{
-		if(drand48() < MUTATION_RATE)
-			e.swing_limit[i] += nrand() / 10.;
-		if(drand48() < MUTATION_RATE)
-			e.twist_limit[i] += nrand() / 10.;
-	}
+	
+	if(drand48() < MUTATION_RATE)
+		e.strength += nrand() * 20.;
+	
+	if(drand48() < MUTATION_RATE)
+		e.stiffness += nrand() * 20.;
 		
 	if(drand48() < MUTATION_RATE)
 	{
@@ -120,7 +118,7 @@ void perturb_gate(GateNode& g)
 	else for(int i=0; i<(int)g.params.size(); i++)
 	{
 		if(drand48() < MUTATION_RATE)
-			g.params[i] += nrand() * 20.;
+			g.params[i] += nrand();
 	}
 }
 
@@ -175,11 +173,9 @@ void create_edge(Genotype& genes, int x)
 	tmp.scale = nrand() + 1.;
 	tmp.reflect = (rand() & 2) ? 1 : -1;
 	
-	for(int i=0; i<2; i++)
-	{
-		tmp.swing_limit[i] = (nrand(3) + 1.5) * M_PI / 3.;
-		tmp.twist_limit[i] = (nrand(3)) * 2. * M_PI / 3.;
-	}
+	tmp.stiffness = fabsf(nrand(6) * 40.) + 10.;
+	tmp.strength = fabsf(nrand() * 200.);
+	
 	
 	//Joint information (must be a hinge)
 	NxVec3 s_size = genes.nodes[tmp.source].size;
