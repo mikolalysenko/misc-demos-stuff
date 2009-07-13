@@ -121,7 +121,7 @@ void init()
 	}
 	*/
 	
-	FitnessTest* tester = new FitnessTest(45000., 15000.);
+	FitnessTest* tester = new FitnessTest(15000., 5000.);
 	
 	population = new Population(
 		150,

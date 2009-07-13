@@ -34,6 +34,15 @@ struct JointEffector : Gate
 	virtual void update();
 };
 
+struct ContactSensor : Gate
+{
+	NxActor* actor;
+	
+	ContactSensor(NxActor* actor_) : actor(actor_) {}
+	virtual ~ContactSensor() {}
+	virtual void update();
+};
+
 //Body part type
 enum BodyPartType
 {
