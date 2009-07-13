@@ -119,6 +119,11 @@ void JointEffector::update()
 	static_cast<NxD6Joint*>(joint)->setDriveOrientation(q);
 }
 
+void ContactSensor::update()
+{
+	//TODO: Implement this
+}
+
 //Copied from SDK
 static NxCCDSkeleton* CreateCCDSkeleton (NxVec3 size)
 {

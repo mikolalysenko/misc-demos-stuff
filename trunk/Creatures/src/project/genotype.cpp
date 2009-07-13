@@ -458,8 +458,8 @@ void Edge::normalize(Genotype& genes)
 	//Fix up the quaternion
 	rot.normalize();
 	
-	if(stiffness < 10.)
-		stiffness = 10.;
+	if(stiffness < 1.)
+		stiffness = 1.;
 	if(strength < 0.)
 		strength = 0.;
 	if(strength > 1e6)

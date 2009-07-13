@@ -173,7 +173,7 @@ void create_edge(Genotype& genes, int x)
 	tmp.scale = nrand() + 1.;
 	tmp.reflect = (rand() & 2) ? 1 : -1;
 	
-	tmp.stiffness = fabsf(nrand(6) * 40.) + 10.;
+	tmp.stiffness = fabsf(nrand(10.) * 40.);
 	tmp.strength = fabsf(nrand() * 200.);
 	
 	
