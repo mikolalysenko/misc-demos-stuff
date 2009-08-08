@@ -1,0 +1,52 @@
+#i#############################################################################
+#
+# Makefile
+#
+###############################################################################
+
+SOURCES  = src/main.cpp \
+	src/common/input.cpp \
+	src/project/game.cpp \
+	src/common/simplex.cpp
+
+DEPENDS  = $(SOURCES:.cpp=.d)
+OBJECTS  = $(SOURCES:.cpp=.o)
+TARGET	 = main
+
+###############################################################################
+
+OPTFLAGS = -g
+
+CC      = g++ -I/Users/mikolalysenko/Apps/eigen2 -I./src/ -I./src/common 
+CFLAGS  = -Wall -Wno-format -arch i386 $(OPTFLAGS)
+LDFLAGS = -framework SDL -framework Cocoa -framework OpenGL -lm
+
+
+###############################################################################
+
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) -I/Library/Frameworks/SDL.framework/Headers -c $(CFLAGS) src/SDLMain.m -o src/SDLMain.o
+	$(CC) $(CFLAGS) $(OBJECTS) src/SDLMain.o $(LDFLAGS) -o $@
+
+clean:
+	$(RM) $(OBJECTS) $(DEPENDS) $(TARGET) SDLMain.o
+
+.PHONY: all clean
+
+###############################################################################
+
+%.o: %.cpp
+	$(CC) -c $(CFLAGS) $< -o $@
+
+%.d: %.cpp
+	$(CC) -MM $< > $@
+
+###############################################################################
+
+ifneq ($(MAKECMDGOALS),clean)
+-include $(DEPENDS)
+endif
+
+###############################################################################
