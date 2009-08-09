@@ -1,6 +1,10 @@
 #include <common/simplex.h>
 #include <common/sys_includes.h>
 
+#include <iostream>
+#include <vector>
+#include <string>
+
 using namespace std;
 
 namespace Common
@@ -584,7 +588,7 @@ int simplex[95][56][2] = {
 
 GLuint simplex_lists;
 
-void init_font()
+void init_fonts()
 {
     simplex_lists = glGenLists(95);
     
@@ -597,19 +601,19 @@ void init_font()
         int N = simplex[i][0][0];
         for(int j=1; j<=N; j++)
         {
-            if(simplex[i][j][0] == -1)
+            if(simplex[i][j][0] == -1 && simplex[i][j][1] == -1)
             {
                 glEnd();
                 glBegin(GL_LINE_STRIP);
             }
             else
             {
-                glVertex3f(simplex[i][j][0], simplex[i][j][1], 0);
+                glVertex3f(simplex[i][j][0], simplex[i][j][1], 0.);
             }
         }
         glEnd();
         
-        glTranlatef(simplex[i][0][1], 0, 0);
+        glTranslatef(simplex[i][0][1], 0, 0);
         
         glEndList();
     }
@@ -618,11 +622,19 @@ void init_font()
 void draw_string(const string& str)
 {
     glPushMatrix();
+    glPushMatrix();
     
     for(int i=0; i<str.size(); i++)
     {
         int c = str[i];
         
+        if(c == '\n')
+        {
+           glPopMatrix();
+           glTranslatef(0, -48, 0);
+           glPushMatrix();
+        }
+     
         if(c < 32)
             continue;
         c -= 32;
@@ -632,6 +644,7 @@ void draw_string(const string& str)
         glCallList(simplex_lists + c);
     }
     
+    glPopMatrix();
     glPopMatrix();
 }
 

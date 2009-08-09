@@ -12,6 +12,8 @@ namespace Game
 	extern bool fullscreen;
 	extern int XRes, YRes;
 	
+	extern bool quit;
+	
 	//Camera variables
 	extern float fov, z_near, z_far;
 	

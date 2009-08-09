@@ -57,13 +57,8 @@ void main_loop()
 						SDL_HWPALETTE);
 				break;
 				
-				case SDL_KEYDOWN:
-					if(event.key.keysym.sym == SDLK_ESCAPE)
-						exit(0);
-				break;
-				
 				case SDL_QUIT:
-					exit(0);
+					Game::quit = true;
 				
 				default: break;
 			}
@@ -97,7 +92,8 @@ void main_loop()
 		glClear(GL_DEPTH_BUFFER_BIT);
 		
 		glMatrixMode(GL_PROJECTION);
-		glOrtho(0, 1, 1, 0, -1, 1);
+		glLoadIdentity();
+		glOrtho(-1, 1, -1, 1, 1, -1);
 		
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
